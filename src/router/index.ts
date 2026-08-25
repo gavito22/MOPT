@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHashHistory } from 'vue-router'
 import { useCurrentUser, authReady } from '@/lib/useCurrentUser'
 import Layout from '@/components/Layout.vue'
 import LoginPage from '@/pages/LoginPage.vue'
@@ -6,7 +6,7 @@ import ViviendasPage from '@/pages/ViviendasPage.vue'
 import ConfiguracionPage from '@/pages/ConfiguracionPage.vue'
 
 const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHashHistory(),
   routes: [
     { path: '/login', name: 'login', component: LoginPage, meta: { public: true } },
     {
