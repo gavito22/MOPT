@@ -82,37 +82,27 @@ create table if not exists viviendas (
 
   -- Primera revisión
   primera_resolucion text check (primera_resolucion in ('Aprobado', 'Rechazado')),
-  primera_observaciones text,
-  primera_oficio_informe_regional text,
-  primera_fecha_informe date,
-  primera_oficio_permiso_funcionamiento text,
-  primera_fecha_permiso_funcionamiento date,
   primera_revisado_por text,
   primera_fecha timestamptz,
 
   -- Segunda revisión (se habilita si la primera fue Rechazado)
   segunda_resolucion text check (segunda_resolucion in ('Aprobado', 'Rechazado')),
-  segunda_observaciones text,
   segunda_fecha_inicio date,
   segunda_fecha_vencimiento date,
-  segunda_oficio_informe_regional text,
-  segunda_fecha_informe date,
-  segunda_oficio_permiso_funcionamiento text,
-  segunda_fecha_permiso_funcionamiento date,
   segunda_revisado_por text,
   segunda_fecha timestamptz,
 
   -- Tercera revisión (se habilita si la segunda fue Rechazado)
   tercera_resolucion text check (tercera_resolucion in ('Aprobado', 'Rechazado')),
-  tercera_observaciones text,
   tercera_fecha_inicio date,
   tercera_fecha_vencimiento date,
-  tercera_oficio_informe_regional text,
-  tercera_fecha_informe date,
-  tercera_oficio_permiso_funcionamiento text,
-  tercera_fecha_permiso_funcionamiento date,
   tercera_revisado_por text,
   tercera_fecha timestamptz,
+
+  -- Información adicional (común a la vivienda, no por revisión)
+  permiso_ejecucion_funcionamiento text,
+  fecha_permiso_ejecucion_funcionamiento date,
+  observaciones text,
 
   created_at timestamptz not null default now(),
   created_by text,
@@ -146,7 +136,6 @@ create index if not exists vivienda_checklist_vivienda_idx on vivienda_checklist
 create table if not exists vivienda_adjuntos (
   id uuid primary key default gen_random_uuid(),
   vivienda_id uuid not null references viviendas (id) on delete cascade,
-  etapa text not null check (etapa in ('Primera revisión', 'Segunda revisión', 'Tercera revisión')),
   nombre_archivo text not null,
   storage_path text not null,
   tipo_mime text,

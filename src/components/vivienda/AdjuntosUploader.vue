@@ -3,21 +3,21 @@ import { ref } from 'vue'
 import { useQuery, useQueryClient } from '@tanstack/vue-query'
 import { Paperclip, Trash2 } from '@lucide/vue'
 import * as api from '@/lib/api'
-import type { Etapa, ViviendaAdjuntoRow } from '@/lib/database.types'
+import type { ViviendaAdjuntoRow } from '@/lib/database.types'
 
-const props = defineProps<{ viviendaId: string; etapa: Etapa }>()
+const props = defineProps<{ viviendaId: string }>()
 
 const queryClient = useQueryClient()
 const fileInput = ref<HTMLInputElement>()
 const subiendo = ref(false)
 
 const { data: adjuntos } = useQuery({
-  queryKey: ['adjuntos', props.viviendaId, props.etapa],
-  queryFn: () => api.listAdjuntos(props.viviendaId, props.etapa),
+  queryKey: ['adjuntos', props.viviendaId],
+  queryFn: () => api.listAdjuntos(props.viviendaId),
 })
 
 function invalidar() {
-  queryClient.invalidateQueries({ queryKey: ['adjuntos', props.viviendaId, props.etapa] })
+  queryClient.invalidateQueries({ queryKey: ['adjuntos', props.viviendaId] })
 }
 
 async function onArchivos(e: Event) {
@@ -26,7 +26,7 @@ async function onArchivos(e: Event) {
   subiendo.value = true
   try {
     for (const file of Array.from(files)) {
-      await api.subirAdjunto(props.viviendaId, props.etapa, file)
+      await api.subirAdjunto(props.viviendaId, file)
     }
     invalidar()
   } finally {

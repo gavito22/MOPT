@@ -1,6 +1,5 @@
 export type Resolucion = 'Aprobado' | 'Rechazado'
 export type EstadoChecklist = 'Cumple' | 'No cumple'
-export type Etapa = 'Primera revisión' | 'Segunda revisión' | 'Tercera revisión'
 export type NumeroRevision = 1 | 2 | 3
 export type Estado =
   | 'Pendiente'
@@ -17,11 +16,13 @@ export interface RevisionCampos {
   fecha: string | null
   fecha_inicio: string | null
   fecha_vencimiento: string | null
+}
+
+/** Campos compartidos por la vivienda (no específicos de una revisión). */
+export interface DatosAdicionalesCampos {
+  permiso_ejecucion_funcionamiento: string | null
+  fecha_permiso_ejecucion_funcionamiento: string | null
   observaciones: string | null
-  oficio_informe_regional: string | null
-  fecha_informe: string | null
-  oficio_permiso_funcionamiento: string | null
-  fecha_permiso_funcionamiento: string | null
 }
 
 export interface DatosCrudosRow {
@@ -84,33 +85,21 @@ export interface ViviendaRow {
   tipo_ingreso: string | null
   estado: Estado
   primera_resolucion: Resolucion | null
-  primera_observaciones: string | null
-  primera_oficio_informe_regional: string | null
-  primera_fecha_informe: string | null
-  primera_oficio_permiso_funcionamiento: string | null
-  primera_fecha_permiso_funcionamiento: string | null
   primera_revisado_por: string | null
   primera_fecha: string | null
   segunda_resolucion: Resolucion | null
-  segunda_observaciones: string | null
   segunda_fecha_inicio: string | null
   segunda_fecha_vencimiento: string | null
-  segunda_oficio_informe_regional: string | null
-  segunda_fecha_informe: string | null
-  segunda_oficio_permiso_funcionamiento: string | null
-  segunda_fecha_permiso_funcionamiento: string | null
   segunda_revisado_por: string | null
   segunda_fecha: string | null
   tercera_resolucion: Resolucion | null
-  tercera_observaciones: string | null
   tercera_fecha_inicio: string | null
   tercera_fecha_vencimiento: string | null
-  tercera_oficio_informe_regional: string | null
-  tercera_fecha_informe: string | null
-  tercera_oficio_permiso_funcionamiento: string | null
-  tercera_fecha_permiso_funcionamiento: string | null
   tercera_revisado_por: string | null
   tercera_fecha: string | null
+  permiso_ejecucion_funcionamiento: string | null
+  fecha_permiso_ejecucion_funcionamiento: string | null
+  observaciones: string | null
   created_at: string
   created_by: string | null
   updated_at: string
@@ -148,7 +137,6 @@ export interface UbicacionCrRow {
 export interface ViviendaAdjuntoRow {
   id: string
   vivienda_id: string
-  etapa: Etapa
   nombre_archivo: string
   storage_path: string
   tipo_mime: string | null

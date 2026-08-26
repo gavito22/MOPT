@@ -1,8 +1,14 @@
 <script setup lang="ts">
-import { computed, reactive } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import * as api from '@/lib/api'
 import AdjuntosUploader from './AdjuntosUploader.vue'
-import type { ViviendaRow, Resolucion, NumeroRevision, RevisionCampos, Etapa } from '@/lib/database.types'
+import type {
+  ViviendaRow,
+  Resolucion,
+  NumeroRevision,
+  RevisionCampos,
+  DatosAdicionalesCampos,
+} from '@/lib/database.types'
 
 const props = defineProps<{ vivienda: ViviendaRow }>()
 const emit = defineEmits<{ actualizado: []; cerrar: [] }>()
@@ -64,14 +70,6 @@ function camposIniciales(numero: NumeroRevision): RevisionCampos {
     fecha: fechaExistente || new Date().toISOString().slice(0, 10),
     fecha_inicio: (v[CAMPO_FECHA_INICIO[numero]] as string | null) ?? '',
     fecha_vencimiento: (v[CAMPO_FECHA_VENCIMIENTO[numero]] as string | null) ?? '',
-    observaciones: (v[`${p}_observaciones` as keyof ViviendaRow] as string | null) ?? '',
-    oficio_informe_regional:
-      (v[`${p}_oficio_informe_regional` as keyof ViviendaRow] as string | null) ?? '',
-    fecha_informe: (v[`${p}_fecha_informe` as keyof ViviendaRow] as string | null) ?? '',
-    oficio_permiso_funcionamiento:
-      (v[`${p}_oficio_permiso_funcionamiento` as keyof ViviendaRow] as string | null) ?? '',
-    fecha_permiso_funcionamiento:
-      (v[`${p}_fecha_permiso_funcionamiento` as keyof ViviendaRow] as string | null) ?? '',
   }
 }
 
@@ -82,12 +80,6 @@ const formularios = reactive<Record<NumeroRevision, RevisionCampos>>({
 })
 const guardando = reactive<Record<NumeroRevision, boolean>>({ 1: false, 2: false, 3: false })
 const errores = reactive<Record<NumeroRevision, string>>({ 1: '', 2: '', 3: '' })
-
-const etapaAdjuntos: Record<NumeroRevision, Etapa> = {
-  1: 'Primera revisión',
-  2: 'Segunda revisión',
-  3: 'Tercera revisión',
-}
 
 const numeros = computed<NumeroRevision[]>(() => [1, 2, 3])
 
@@ -107,6 +99,32 @@ async function guardar(numero: NumeroRevision) {
     errores[numero] = mensaje || 'No se pudo guardar la revisión.'
   } finally {
     guardando[numero] = false
+  }
+}
+
+// ---------- Datos adicionales (comunes a la vivienda, no por revisión) ----------
+const datosAdicionales = reactive<DatosAdicionalesCampos>({
+  permiso_ejecucion_funcionamiento: props.vivienda.permiso_ejecucion_funcionamiento ?? '',
+  fecha_permiso_ejecucion_funcionamiento: props.vivienda.fecha_permiso_ejecucion_funcionamiento ?? '',
+  observaciones: props.vivienda.observaciones ?? '',
+})
+const guardandoAdicionales = ref(false)
+const errorAdicionales = ref('')
+const mensajeAdicionales = ref('')
+
+async function guardarAdicionales() {
+  guardandoAdicionales.value = true
+  errorAdicionales.value = ''
+  mensajeAdicionales.value = ''
+  try {
+    await api.guardarDatosAdicionales(props.vivienda.id, datosAdicionales)
+    emit('actualizado')
+    mensajeAdicionales.value = 'Guardado.'
+  } catch (err) {
+    const mensaje = (err as { message?: string } | null)?.message
+    errorAdicionales.value = mensaje || 'No se pudo guardar.'
+  } finally {
+    guardandoAdicionales.value = false
   }
 }
 </script>
@@ -170,60 +188,6 @@ async function guardar(numero: NumeroRevision) {
             </div>
           </div>
 
-          <div
-            v-if="formularios[numero].resolucion === 'Aprobado'"
-            class="grid grid-cols-1 sm:grid-cols-2 gap-4"
-          >
-            <div>
-              <label class="text-xs text-gray-500">Oficio o informe de regional</label>
-              <input
-                v-model="formularios[numero].oficio_informe_regional"
-                :disabled="bloqueada(numero)"
-                type="text"
-                class="w-full border rounded-lg px-2 py-1.5"
-              />
-            </div>
-            <div>
-              <label class="text-xs text-gray-500">Fecha informe</label>
-              <input
-                v-model="formularios[numero].fecha_informe"
-                :disabled="bloqueada(numero)"
-                type="date"
-                class="w-full border rounded-lg px-2 py-1.5"
-              />
-            </div>
-            <div>
-              <label class="text-xs text-gray-500">Oficio permiso de funcionamiento</label>
-              <input
-                v-model="formularios[numero].oficio_permiso_funcionamiento"
-                :disabled="bloqueada(numero)"
-                type="text"
-                class="w-full border rounded-lg px-2 py-1.5"
-              />
-            </div>
-            <div>
-              <label class="text-xs text-gray-500">Fecha permiso de funcionamiento</label>
-              <input
-                v-model="formularios[numero].fecha_permiso_funcionamiento"
-                :disabled="bloqueada(numero)"
-                type="date"
-                class="w-full border rounded-lg px-2 py-1.5"
-              />
-            </div>
-          </div>
-
-          <AdjuntosUploader :vivienda-id="vivienda.id" :etapa="etapaAdjuntos[numero]" />
-
-          <div>
-            <label class="text-xs text-gray-500">Observaciones</label>
-            <textarea
-              v-model="formularios[numero].observaciones"
-              :disabled="bloqueada(numero)"
-              rows="3"
-              class="w-full border rounded-lg px-2 py-1.5"
-            />
-          </div>
-
           <div>
             <p v-if="bloqueada(numero)" class="text-xs text-gray-500 mb-2">
               Revisado por {{ revisadoPorDe(numero) }} el {{ fechaDe(numero) }}
@@ -240,6 +204,54 @@ async function guardar(numero: NumeroRevision) {
             <p v-if="errores[numero]" class="text-xs text-error mb-2">{{ errores[numero] }}</p>
           </div>
         </template>
+      </div>
+    </section>
+
+    <section class="border rounded-lg overflow-hidden">
+      <header class="bg-primary text-white px-4 py-2 font-semibold">Información adicional</header>
+      <div class="p-4 space-y-3">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="text-xs text-gray-500">Permiso de ejecución y funcionamiento</label>
+            <input
+              v-model="datosAdicionales.permiso_ejecucion_funcionamiento"
+              type="text"
+              class="w-full border rounded-lg px-2 py-1.5"
+            />
+          </div>
+          <div>
+            <label class="text-xs text-gray-500">Fecha permiso de ejecución y funcionamiento</label>
+            <input
+              v-model="datosAdicionales.fecha_permiso_ejecucion_funcionamiento"
+              type="date"
+              class="w-full border rounded-lg px-2 py-1.5"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label class="text-xs text-gray-500">Observaciones</label>
+          <textarea
+            v-model="datosAdicionales.observaciones"
+            rows="3"
+            class="w-full border rounded-lg px-2 py-1.5"
+          />
+        </div>
+
+        <AdjuntosUploader :vivienda-id="vivienda.id" />
+
+        <div>
+          <button
+            type="button"
+            class="bg-primary text-white px-4 py-2 rounded-lg shadow-sm mb-2"
+            :disabled="guardandoAdicionales"
+            @click="guardarAdicionales"
+          >
+            {{ guardandoAdicionales ? 'Guardando…' : 'Guardar' }}
+          </button>
+          <p v-if="mensajeAdicionales" class="text-xs text-gray-500 mb-2">{{ mensajeAdicionales }}</p>
+          <p v-if="errorAdicionales" class="text-xs text-error mb-2">{{ errorAdicionales }}</p>
+        </div>
       </div>
     </section>
   </div>

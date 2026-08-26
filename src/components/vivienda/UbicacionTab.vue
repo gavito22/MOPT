@@ -1,10 +1,22 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, watch } from 'vue'
 import L from 'leaflet'
+import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png'
+import markerIcon from 'leaflet/dist/images/marker-icon.png'
+import markerShadow from 'leaflet/dist/images/marker-shadow.png'
 import * as api from '@/lib/api'
 import { capturarMapa } from '@/lib/useMapCapture'
 import { parseCoordenadasRaw } from '@/lib/utils'
 import type { ViviendaRow, RegionalRow } from '@/lib/database.types'
+
+// El bundler no resuelve las URLs de íconos por defecto de Leaflet (asume rutas
+// relativas al CSS); sin esto el marcador no se ve en el mapa.
+delete (L.Icon.Default.prototype as unknown as { _getIconUrl?: unknown })._getIconUrl
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: markerIcon2x,
+  iconUrl: markerIcon,
+  shadowUrl: markerShadow,
+})
 
 const props = defineProps<{ vivienda: ViviendaRow }>()
 const emit = defineEmits<{ guardado: [] }>()
@@ -46,6 +58,7 @@ onMounted(async () => {
   mapa = L.map(mapaEl.value).setView([lat.value, lng.value], tienePunto.value ? 13 : 8)
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© OpenStreetMap',
+    crossOrigin: true,
   }).addTo(mapa)
 
   if (tienePunto.value) {

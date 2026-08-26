@@ -188,7 +188,7 @@ export async function exportFichaPdf(
       fecha: vivienda.primera_fecha,
       fecha_inicio: vivienda.fecha_inicio,
       fecha_vencimiento: vivienda.fecha_vencimiento,
-      observaciones: vivienda.primera_observaciones,
+      revisado_por: vivienda.primera_revisado_por,
     },
     {
       etiqueta: 'Segunda revisión',
@@ -196,7 +196,7 @@ export async function exportFichaPdf(
       fecha: vivienda.segunda_fecha,
       fecha_inicio: vivienda.segunda_fecha_inicio,
       fecha_vencimiento: vivienda.segunda_fecha_vencimiento,
-      observaciones: vivienda.segunda_observaciones,
+      revisado_por: vivienda.segunda_revisado_por,
     },
     {
       etiqueta: 'Tercera revisión',
@@ -204,7 +204,7 @@ export async function exportFichaPdf(
       fecha: vivienda.tercera_fecha,
       fecha_inicio: vivienda.tercera_fecha_inicio,
       fecha_vencimiento: vivienda.tercera_fecha_vencimiento,
-      observaciones: vivienda.tercera_observaciones,
+      revisado_por: vivienda.tercera_revisado_por,
     },
   ].filter((r) => r.resolucion)
 
@@ -226,14 +226,14 @@ export async function exportFichaPdf(
     autoTable(doc, {
       startY: y,
       margin: { left: MARGEN_X, right: MARGEN_X },
-      head: [['Resultado', 'Fecha', 'Inicio', 'Vencimiento', 'Observaciones']],
+      head: [['Resultado', 'Fecha', 'Inicio', 'Vencimiento', 'Revisado por']],
       body: [
         [
           r.resolucion ?? '—',
           r.fecha?.slice(0, 10) ?? '—',
           r.fecha_inicio ?? '—',
           r.fecha_vencimiento ?? '—',
-          r.observaciones || '—',
+          r.revisado_por || '—',
         ],
       ],
       styles: { fontSize: 9 },
@@ -241,6 +241,13 @@ export async function exportFichaPdf(
     })
     y = finalY(doc) + 6
   }
+
+  y = dibujarSeccion(doc, 'Información adicional', y)
+  y = tablaClaveValor(doc, y, [
+    ['Permiso de ejecución y funcionamiento', vivienda.permiso_ejecucion_funcionamiento ?? '—'],
+    ['Fecha permiso de ejecución y funcionamiento', vivienda.fecha_permiso_ejecucion_funcionamiento ?? '—'],
+    ['Observaciones', vivienda.observaciones ?? '—'],
+  ])
 
   const nombreArchivo = `Ficha - ${vivienda.codigo_apc ?? vivienda.id} - ${vivienda.nombre_proyecto ?? ''}.pdf`
   doc.save(nombreArchivo)

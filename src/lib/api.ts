@@ -6,10 +6,10 @@ import type {
   ViviendaChecklistRow,
   RegionalRow,
   ViviendaAdjuntoRow,
-  Etapa,
   DatosApcCampos,
   NumeroRevision,
   RevisionCampos,
+  DatosAdicionalesCampos,
 } from './database.types'
 
 // ---------- Datos crudos ----------
@@ -200,16 +200,20 @@ export async function guardarRevision(id: string, numero: NumeroRevision, campos
     [`${p}_resolucion`]: campos.resolucion,
     [CAMPO_FECHA_INICIO[numero]]: campos.fecha_inicio || null,
     [CAMPO_FECHA_VENCIMIENTO[numero]]: campos.fecha_vencimiento || null,
-    [`${p}_observaciones`]: campos.observaciones,
-    [`${p}_oficio_informe_regional`]: campos.oficio_informe_regional || null,
-    [`${p}_fecha_informe`]: campos.fecha_informe || null,
-    [`${p}_oficio_permiso_funcionamiento`]: campos.oficio_permiso_funcionamiento || null,
-    [`${p}_fecha_permiso_funcionamiento`]: campos.fecha_permiso_funcionamiento || null,
     [`${p}_revisado_por`]: userData.user?.email ?? null,
     [`${p}_fecha`]: campos.fecha || new Date().toISOString(),
   }
   if (campos.resolucion === 'Rechazado') cambios.tipo_ingreso = SIGUIENTE_INGRESO[numero]
   return actualizarVivienda(id, cambios as Partial<ViviendaRow>)
+}
+
+/** Permiso de ejecución y funcionamiento + Observaciones: comunes a la vivienda, no por revisión. */
+export async function guardarDatosAdicionales(id: string, campos: DatosAdicionalesCampos) {
+  return actualizarVivienda(id, {
+    permiso_ejecucion_funcionamiento: campos.permiso_ejecucion_funcionamiento || null,
+    fecha_permiso_ejecucion_funcionamiento: campos.fecha_permiso_ejecucion_funcionamiento || null,
+    observaciones: campos.observaciones || null,
+  })
 }
 
 // ---------- Checklist ----------
@@ -308,27 +312,24 @@ export async function listDistritos(provincia: string, canton: string) {
 
 // ---------- Adjuntos ----------
 
-export async function listAdjuntos(viviendaId: string, etapa?: Etapa) {
-  let query = supabase
+export async function listAdjuntos(viviendaId: string) {
+  const { data, error } = await supabase
     .from('vivienda_adjuntos')
     .select('*')
     .eq('vivienda_id', viviendaId)
     .order('subido_en', { ascending: false })
-  if (etapa) query = query.eq('etapa', etapa)
-  const { data, error } = await query
   if (error) throw error
   return data as ViviendaAdjuntoRow[]
 }
 
-export async function subirAdjunto(viviendaId: string, etapa: Etapa, file: File) {
+export async function subirAdjunto(viviendaId: string, file: File) {
   const { data: userData } = await supabase.auth.getUser()
-  const path = `${viviendaId}/${etapa}/${Date.now()}-${file.name}`
+  const path = `${viviendaId}/${Date.now()}-${file.name}`
   const { error: errUpload } = await supabase.storage.from('adjuntos').upload(path, file)
   if (errUpload) throw errUpload
 
   const { error } = await supabase.from('vivienda_adjuntos').insert({
     vivienda_id: viviendaId,
-    etapa,
     nombre_archivo: file.name,
     storage_path: path,
     tipo_mime: file.type,

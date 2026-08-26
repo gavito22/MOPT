@@ -95,35 +95,6 @@ const COLOR_PRIMERA = 'FF133C65'
 const COLOR_SEGUNDA = 'FF376092'
 const COLOR_TERCERA = 'FF558ED5'
 
-/** Datos "administrativos" (no específicos de una revisión) de la última revisión con resolución. */
-function datosAdministrativosVigentes(v: ViviendaRow) {
-  if (v.tercera_resolucion) {
-    return {
-      revisado_por: v.tercera_revisado_por,
-      oficio_informe_regional: v.tercera_oficio_informe_regional,
-      fecha_informe: v.tercera_fecha_informe,
-      oficio_permiso_funcionamiento: v.tercera_oficio_permiso_funcionamiento,
-      fecha_permiso_funcionamiento: v.tercera_fecha_permiso_funcionamiento,
-    }
-  }
-  if (v.segunda_resolucion) {
-    return {
-      revisado_por: v.segunda_revisado_por,
-      oficio_informe_regional: v.segunda_oficio_informe_regional,
-      fecha_informe: v.segunda_fecha_informe,
-      oficio_permiso_funcionamiento: v.segunda_oficio_permiso_funcionamiento,
-      fecha_permiso_funcionamiento: v.segunda_fecha_permiso_funcionamiento,
-    }
-  }
-  return {
-    revisado_por: v.primera_revisado_por,
-    oficio_informe_regional: v.primera_oficio_informe_regional,
-    fecha_informe: v.primera_fecha_informe,
-    oficio_permiso_funcionamiento: v.primera_oficio_permiso_funcionamiento,
-    fecha_permiso_funcionamiento: v.primera_fecha_permiso_funcionamiento,
-  }
-}
-
 const COLUMNAS_COMPENDIO: { key: string; header: string }[] = [
   { key: 'codigo_cfia', header: 'Código CFIA' },
   { key: 'codigo_apc', header: 'Código APC' },
@@ -134,34 +105,33 @@ const COLUMNAS_COMPENDIO: { key: string; header: string }[] = [
   { key: 'ruta_nacional', header: 'Ruta' },
   { key: 'catastro', header: 'Catastro' },
   { key: 'coordenadas', header: 'Coordenadas' },
-  { key: 'regional', header: 'Regional' },
-  { key: 'primera_resolucion', header: 'Resolución' },
-  { key: 'primera_fecha_resolucion', header: 'Fecha de resolución' },
   { key: 'primera_inicio', header: 'Inicio' },
   { key: 'primera_vencimiento', header: 'Vencimiento' },
-  { key: 'primera_observaciones', header: 'Observaciones' },
-  { key: 'segunda_resolucion', header: 'Resolución' },
-  { key: 'segunda_fecha_resolucion', header: 'Fecha de resolución' },
-  { key: 'segunda_inicio', header: 'Inicio' },
+  { key: 'primera_resolucion', header: 'Resolucion' },
+  { key: 'primera_fecha_resolucion', header: 'Fecha de resolucion' },
+  { key: 'primera_revisado_por', header: 'Revisado por' },
+  { key: 'segunda_inicio', header: 'Inicio ' },
   { key: 'segunda_vencimiento', header: 'Vencimiento' },
-  { key: 'segunda_observaciones', header: 'Observaciones' },
-  { key: 'tercera_resolucion', header: 'Resolución' },
-  { key: 'tercera_fecha_resolucion', header: 'Fecha de resolución' },
-  { key: 'tercera_inicio', header: 'Inicio' },
+  { key: 'segunda_resolucion', header: 'Resolucion ' },
+  { key: 'segunda_fecha_resolucion', header: 'Fecha de resolucion ' },
+  { key: 'segunda_revisado_por', header: 'Revisado por' },
+  { key: 'tercera_inicio', header: 'Inicio ' },
   { key: 'tercera_vencimiento', header: 'Vencimiento' },
-  { key: 'tercera_observaciones', header: 'Observaciones' },
-  { key: 'revisado_por', header: 'Revisado por' },
-  { key: 'oficio_informe_regional', header: 'Oficio o informe de regional' },
-  { key: 'fecha_informe', header: 'Fecha informe' },
-  { key: 'oficio_funcionamiento', header: 'Oficio permiso de funcionamiento' },
-  { key: 'fecha_funcionamiento', header: 'Fecha permiso de funcionamiento' },
+  { key: 'tercera_resolucion', header: 'Resolucion ' },
+  { key: 'tercera_fecha_resolucion', header: 'Fecha de resolucion' },
+  { key: 'tercera_revisado_por', header: 'Revisado por' },
+  { key: 'permiso_ejecucion_funcionamiento', header: 'Permiso de ejecucion y funcionamiento' },
+  { key: 'fecha_permiso_ejecucion_funcionamiento', header: 'Fecha permiso de ejecucion y funcionamiento' },
+  { key: 'regional', header: 'Regional' },
+  { key: 'observaciones', header: 'Observaciones ' },
+  { key: 'ficha', header: 'Ficha' },
 ]
 
 /** Columnas (1-based, inclusive) que ocupa cada bloque de revisión en COLUMNAS_COMPENDIO. */
 const GRUPOS_REVISION: { desde: number; hasta: number; titulo: string; color: string }[] = [
-  { desde: 11, hasta: 15, titulo: 'Primera Revisión', color: COLOR_PRIMERA },
-  { desde: 16, hasta: 20, titulo: 'Segunda Revisión', color: COLOR_SEGUNDA },
-  { desde: 21, hasta: 25, titulo: 'Tercera Revisión', color: COLOR_TERCERA },
+  { desde: 10, hasta: 14, titulo: '', color: COLOR_PRIMERA },
+  { desde: 15, hasta: 19, titulo: 'Segunda Revisión', color: COLOR_SEGUNDA },
+  { desde: 20, hasta: 24, titulo: 'Tercera Revisión', color: COLOR_TERCERA },
 ]
 
 export async function exportCompendio(viviendas: ViviendaRow[]) {
@@ -172,7 +142,8 @@ export async function exportCompendio(viviendas: ViviendaRow[]) {
   // Fila 1: banner con el título general y el nombre de cada revisión sobre su bloque de columnas.
   const filaTitulo = sheet.getRow(1)
   filaTitulo.height = 21
-  for (let col = 1; col <= 10; col++) {
+  for (let col = 1; col <= COLUMNAS_COMPENDIO.length; col++) {
+    if (col >= 10 && col <= 24) continue
     filaTitulo.getCell(col).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: COLOR_PRIMERA } }
   }
   filaTitulo.getCell(1).value = 'Viviendas Unifamiliares'
@@ -180,9 +151,11 @@ export async function exportCompendio(viviendas: ViviendaRow[]) {
   for (const grupo of GRUPOS_REVISION) {
     sheet.mergeCells(1, grupo.desde, 1, grupo.hasta)
     const celda = filaTitulo.getCell(grupo.desde)
-    celda.value = grupo.titulo
-    celda.font = { bold: true, size: 14, color: { argb: 'FFFFFFFF' }, name: 'Calibri' }
-    celda.alignment = { horizontal: 'center', vertical: 'middle' }
+    if (grupo.titulo) {
+      celda.value = grupo.titulo
+      celda.font = { bold: true, size: 14, color: { argb: 'FFFFFFFF' }, name: 'Calibri' }
+      celda.alignment = { horizontal: 'center', vertical: 'middle' }
+    }
     for (let col = grupo.desde; col <= grupo.hasta; col++) {
       filaTitulo.getCell(col).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: grupo.color } }
     }
@@ -200,7 +173,6 @@ export async function exportCompendio(viviendas: ViviendaRow[]) {
   })
 
   for (const v of viviendas) {
-    const admin = datosAdministrativosVigentes(v)
     sheet.addRow({
       codigo_cfia: v.codigo_cfia,
       codigo_apc: v.codigo_apc,
@@ -211,27 +183,26 @@ export async function exportCompendio(viviendas: ViviendaRow[]) {
       ruta_nacional: v.ruta_nacional,
       catastro: v.catastro,
       coordenadas: v.coordenadas_raw,
-      regional: v.regionales?.nombre ?? null,
-      primera_resolucion: v.primera_resolucion,
-      primera_fecha_resolucion: v.primera_fecha,
       primera_inicio: v.fecha_inicio,
       primera_vencimiento: v.fecha_vencimiento,
-      primera_observaciones: v.primera_observaciones,
-      segunda_resolucion: v.segunda_resolucion,
-      segunda_fecha_resolucion: v.segunda_fecha,
+      primera_resolucion: v.primera_resolucion,
+      primera_fecha_resolucion: v.primera_fecha,
+      primera_revisado_por: v.primera_revisado_por,
       segunda_inicio: v.segunda_fecha_inicio,
       segunda_vencimiento: v.segunda_fecha_vencimiento,
-      segunda_observaciones: v.segunda_observaciones,
-      tercera_resolucion: v.tercera_resolucion,
-      tercera_fecha_resolucion: v.tercera_fecha,
+      segunda_resolucion: v.segunda_resolucion,
+      segunda_fecha_resolucion: v.segunda_fecha,
+      segunda_revisado_por: v.segunda_revisado_por,
       tercera_inicio: v.tercera_fecha_inicio,
       tercera_vencimiento: v.tercera_fecha_vencimiento,
-      tercera_observaciones: v.tercera_observaciones,
-      revisado_por: admin.revisado_por,
-      oficio_informe_regional: admin.oficio_informe_regional,
-      fecha_informe: admin.fecha_informe,
-      oficio_funcionamiento: admin.oficio_permiso_funcionamiento,
-      fecha_funcionamiento: admin.fecha_permiso_funcionamiento,
+      tercera_resolucion: v.tercera_resolucion,
+      tercera_fecha_resolucion: v.tercera_fecha,
+      tercera_revisado_por: v.tercera_revisado_por,
+      permiso_ejecucion_funcionamiento: v.permiso_ejecucion_funcionamiento,
+      fecha_permiso_ejecucion_funcionamiento: v.fecha_permiso_ejecucion_funcionamiento,
+      regional: v.regionales?.nombre ?? null,
+      observaciones: v.observaciones,
+      ficha: null,
     })
   }
 
