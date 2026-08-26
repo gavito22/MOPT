@@ -83,14 +83,6 @@ async function guardar() {
         <input v-model="campos.propietario" type="text" class="w-full border rounded-lg px-2 py-1.5" />
       </div>
       <div>
-        <label class="text-xs text-gray-500">Inicio</label>
-        <input v-model="campos.fecha_inicio" type="date" class="w-full border rounded-lg px-2 py-1.5" />
-      </div>
-      <div>
-        <label class="text-xs text-gray-500">Vencimiento</label>
-        <input v-model="campos.fecha_vencimiento" type="date" class="w-full border rounded-lg px-2 py-1.5" />
-      </div>
-      <div>
         <label class="text-xs text-gray-500">Coordenadas</label>
         <input v-model="campos.coordenadas_raw" type="text" class="w-full border rounded-lg px-2 py-1.5" />
       </div>

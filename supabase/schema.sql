@@ -93,6 +93,8 @@ create table if not exists viviendas (
   -- Segunda revisión (se habilita si la primera fue Rechazado)
   segunda_resolucion text check (segunda_resolucion in ('Aprobado', 'Rechazado')),
   segunda_observaciones text,
+  segunda_fecha_inicio date,
+  segunda_fecha_vencimiento date,
   segunda_oficio_informe_regional text,
   segunda_fecha_informe date,
   segunda_oficio_permiso_funcionamiento text,
@@ -103,6 +105,8 @@ create table if not exists viviendas (
   -- Tercera revisión (se habilita si la segunda fue Rechazado)
   tercera_resolucion text check (tercera_resolucion in ('Aprobado', 'Rechazado')),
   tercera_observaciones text,
+  tercera_fecha_inicio date,
+  tercera_fecha_vencimiento date,
   tercera_oficio_informe_regional text,
   tercera_fecha_informe date,
   tercera_oficio_permiso_funcionamiento text,

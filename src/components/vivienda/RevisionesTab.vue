@@ -18,6 +18,19 @@ const ETIQUETA: Record<NumeroRevision, string> = {
   3: 'Tercera revisión',
 }
 
+// La Primera revisión reutiliza los campos "generales" de la vivienda (fecha_inicio /
+// fecha_vencimiento); Segunda y Tercera tienen sus propias columnas prefijadas.
+const CAMPO_FECHA_INICIO: Record<NumeroRevision, keyof ViviendaRow> = {
+  1: 'fecha_inicio',
+  2: 'segunda_fecha_inicio',
+  3: 'tercera_fecha_inicio',
+}
+const CAMPO_FECHA_VENCIMIENTO: Record<NumeroRevision, keyof ViviendaRow> = {
+  1: 'fecha_vencimiento',
+  2: 'segunda_fecha_vencimiento',
+  3: 'tercera_fecha_vencimiento',
+}
+
 function resolucionDe(numero: NumeroRevision): Resolucion | null {
   const p = PREFIJO[numero]
   return props.vivienda[`${p}_resolucion` as keyof ViviendaRow] as Resolucion | null
@@ -49,6 +62,8 @@ function camposIniciales(numero: NumeroRevision): RevisionCampos {
   return {
     resolucion: (v[`${p}_resolucion` as keyof ViviendaRow] as Resolucion | null) ?? null,
     fecha: fechaExistente || new Date().toISOString().slice(0, 10),
+    fecha_inicio: (v[CAMPO_FECHA_INICIO[numero]] as string | null) ?? '',
+    fecha_vencimiento: (v[CAMPO_FECHA_VENCIMIENTO[numero]] as string | null) ?? '',
     observaciones: (v[`${p}_observaciones` as keyof ViviendaRow] as string | null) ?? '',
     oficio_informe_regional:
       (v[`${p}_oficio_informe_regional` as keyof ViviendaRow] as string | null) ?? '',
@@ -134,6 +149,27 @@ async function guardar(numero: NumeroRevision) {
             </div>
           </div>
 
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="text-xs text-gray-500">Fecha de inicio</label>
+              <input
+                v-model="formularios[numero].fecha_inicio"
+                :disabled="bloqueada(numero)"
+                type="date"
+                class="w-full border rounded-lg px-2 py-1.5"
+              />
+            </div>
+            <div>
+              <label class="text-xs text-gray-500">Fecha de vencimiento</label>
+              <input
+                v-model="formularios[numero].fecha_vencimiento"
+                :disabled="bloqueada(numero)"
+                type="date"
+                class="w-full border rounded-lg px-2 py-1.5"
+              />
+            </div>
+          </div>
+
           <div
             v-if="formularios[numero].resolucion === 'Aprobado'"
             class="grid grid-cols-1 sm:grid-cols-2 gap-4"
@@ -176,6 +212,8 @@ async function guardar(numero: NumeroRevision) {
             </div>
           </div>
 
+          <AdjuntosUploader :vivienda-id="vivienda.id" :etapa="etapaAdjuntos[numero]" />
+
           <div>
             <label class="text-xs text-gray-500">Observaciones</label>
             <textarea
@@ -200,7 +238,6 @@ async function guardar(numero: NumeroRevision) {
               {{ guardando[numero] ? 'Guardando…' : `Guardar ${ETIQUETA[numero].toLowerCase()}` }}
             </button>
             <p v-if="errores[numero]" class="text-xs text-error mb-2">{{ errores[numero] }}</p>
-            <AdjuntosUploader :vivienda-id="vivienda.id" :etapa="etapaAdjuntos[numero]" />
           </div>
         </template>
       </div>

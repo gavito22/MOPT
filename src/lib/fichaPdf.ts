@@ -122,8 +122,6 @@ export async function exportFichaPdf(
     ['Código CFIA', vivienda.codigo_cfia ?? '—'],
     ['Código APC', vivienda.codigo_apc ?? '—'],
     ['Días decreto', vivienda.dias_decreto != null ? String(vivienda.dias_decreto) : '—'],
-    ['Inicio', vivienda.fecha_inicio ?? '—'],
-    ['Vencimiento', vivienda.fecha_vencimiento ?? '—'],
     ['Propietario', vivienda.propietario ?? '—'],
     ['Catastro', vivienda.catastro ?? '—'],
     ['Coordenadas', vivienda.coordenadas_raw ?? '—'],
@@ -188,18 +186,24 @@ export async function exportFichaPdf(
       etiqueta: 'Primera revisión',
       resolucion: vivienda.primera_resolucion,
       fecha: vivienda.primera_fecha,
+      fecha_inicio: vivienda.fecha_inicio,
+      fecha_vencimiento: vivienda.fecha_vencimiento,
       observaciones: vivienda.primera_observaciones,
     },
     {
       etiqueta: 'Segunda revisión',
       resolucion: vivienda.segunda_resolucion,
       fecha: vivienda.segunda_fecha,
+      fecha_inicio: vivienda.segunda_fecha_inicio,
+      fecha_vencimiento: vivienda.segunda_fecha_vencimiento,
       observaciones: vivienda.segunda_observaciones,
     },
     {
       etiqueta: 'Tercera revisión',
       resolucion: vivienda.tercera_resolucion,
       fecha: vivienda.tercera_fecha,
+      fecha_inicio: vivienda.tercera_fecha_inicio,
+      fecha_vencimiento: vivienda.tercera_fecha_vencimiento,
       observaciones: vivienda.tercera_observaciones,
     },
   ].filter((r) => r.resolucion)
@@ -222,8 +226,16 @@ export async function exportFichaPdf(
     autoTable(doc, {
       startY: y,
       margin: { left: MARGEN_X, right: MARGEN_X },
-      head: [['Resultado', 'Fecha', 'Observaciones']],
-      body: [[r.resolucion ?? '—', r.fecha?.slice(0, 10) ?? '—', r.observaciones || '—']],
+      head: [['Resultado', 'Fecha', 'Inicio', 'Vencimiento', 'Observaciones']],
+      body: [
+        [
+          r.resolucion ?? '—',
+          r.fecha?.slice(0, 10) ?? '—',
+          r.fecha_inicio ?? '—',
+          r.fecha_vencimiento ?? '—',
+          r.observaciones || '—',
+        ],
+      ],
       styles: { fontSize: 9 },
       headStyles: { fillColor: COLOR_PRIMARIO },
     })

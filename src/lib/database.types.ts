@@ -15,6 +15,8 @@ export type Estado =
 export interface RevisionCampos {
   resolucion: Resolucion | null
   fecha: string | null
+  fecha_inicio: string | null
+  fecha_vencimiento: string | null
   observaciones: string | null
   oficio_informe_regional: string | null
   fecha_informe: string | null
@@ -91,6 +93,8 @@ export interface ViviendaRow {
   primera_fecha: string | null
   segunda_resolucion: Resolucion | null
   segunda_observaciones: string | null
+  segunda_fecha_inicio: string | null
+  segunda_fecha_vencimiento: string | null
   segunda_oficio_informe_regional: string | null
   segunda_fecha_informe: string | null
   segunda_oficio_permiso_funcionamiento: string | null
@@ -99,6 +103,8 @@ export interface ViviendaRow {
   segunda_fecha: string | null
   tercera_resolucion: Resolucion | null
   tercera_observaciones: string | null
+  tercera_fecha_inicio: string | null
+  tercera_fecha_vencimiento: string | null
   tercera_oficio_informe_regional: string | null
   tercera_fecha_informe: string | null
   tercera_oficio_permiso_funcionamiento: string | null

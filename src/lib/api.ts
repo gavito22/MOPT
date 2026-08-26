@@ -147,8 +147,25 @@ export async function actualizarVivienda(id: string, cambios: Partial<ViviendaRo
 }
 
 export async function eliminarVivienda(id: string) {
+  const { data: vivienda, error: errGet } = await supabase
+    .from('viviendas')
+    .select('datos_crudos_id')
+    .eq('id', id)
+    .single()
+  if (errGet) throw errGet
+
   const { error } = await supabase.from('viviendas').delete().eq('id', id)
   if (error) throw error
+
+  // Libera el registro de datos_crudos asociado (si lo hay) para que un nuevo
+  // archivo con el mismo Código APC vuelva a crear la vivienda en la carga masiva.
+  if (vivienda?.datos_crudos_id) {
+    const { error: errCrudo } = await supabase
+      .from('datos_crudos')
+      .delete()
+      .eq('id', vivienda.datos_crudos_id)
+    if (errCrudo) throw errCrudo
+  }
 }
 
 const PREFIJO_REVISION: Record<NumeroRevision, 'primera' | 'segunda' | 'tercera'> = {
@@ -163,11 +180,26 @@ const SIGUIENTE_INGRESO: Record<NumeroRevision, string> = {
   3: 'Tercer ingreso',
 }
 
+// La Primera revisión reutiliza los campos "generales" de la vivienda (fecha_inicio /
+// fecha_vencimiento); Segunda y Tercera tienen sus propias columnas prefijadas.
+const CAMPO_FECHA_INICIO: Record<NumeroRevision, string> = {
+  1: 'fecha_inicio',
+  2: 'segunda_fecha_inicio',
+  3: 'tercera_fecha_inicio',
+}
+const CAMPO_FECHA_VENCIMIENTO: Record<NumeroRevision, string> = {
+  1: 'fecha_vencimiento',
+  2: 'segunda_fecha_vencimiento',
+  3: 'tercera_fecha_vencimiento',
+}
+
 export async function guardarRevision(id: string, numero: NumeroRevision, campos: RevisionCampos) {
   const { data: userData } = await supabase.auth.getUser()
   const p = PREFIJO_REVISION[numero]
   const cambios: Record<string, unknown> = {
     [`${p}_resolucion`]: campos.resolucion,
+    [CAMPO_FECHA_INICIO[numero]]: campos.fecha_inicio || null,
+    [CAMPO_FECHA_VENCIMIENTO[numero]]: campos.fecha_vencimiento || null,
     [`${p}_observaciones`]: campos.observaciones,
     [`${p}_oficio_informe_regional`]: campos.oficio_informe_regional || null,
     [`${p}_fecha_informe`]: campos.fecha_informe || null,

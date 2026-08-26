@@ -91,25 +91,15 @@ async function descargarWorkbook(workbook: ExcelJS.Workbook, nombreArchivo: stri
   URL.revokeObjectURL(url)
 }
 
-function estiloEncabezado(sheet: ExcelJS.Worksheet) {
-  const header = sheet.getRow(1)
-  header.font = { bold: true, color: { argb: 'FFFFFFFF' } }
-  header.eachCell((cell) => {
-    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF133C65' } }
-  })
-  sheet.columns.forEach((c) => {
-    c.width = 22
-  })
-}
+const COLOR_PRIMERA = 'FF133C65'
+const COLOR_SEGUNDA = 'FF376092'
+const COLOR_TERCERA = 'FF558ED5'
 
-/** Última revisión (1ra/2da/3ra) que ya tiene una resolución registrada. */
-function revisionVigente(v: ViviendaRow) {
+/** Datos "administrativos" (no específicos de una revisión) de la última revisión con resolución. */
+function datosAdministrativosVigentes(v: ViviendaRow) {
   if (v.tercera_resolucion) {
     return {
-      resolucion: v.tercera_resolucion,
-      fecha: v.tercera_fecha,
       revisado_por: v.tercera_revisado_por,
-      observaciones: v.tercera_observaciones,
       oficio_informe_regional: v.tercera_oficio_informe_regional,
       fecha_informe: v.tercera_fecha_informe,
       oficio_permiso_funcionamiento: v.tercera_oficio_permiso_funcionamiento,
@@ -118,10 +108,7 @@ function revisionVigente(v: ViviendaRow) {
   }
   if (v.segunda_resolucion) {
     return {
-      resolucion: v.segunda_resolucion,
-      fecha: v.segunda_fecha,
       revisado_por: v.segunda_revisado_por,
-      observaciones: v.segunda_observaciones,
       oficio_informe_regional: v.segunda_oficio_informe_regional,
       fecha_informe: v.segunda_fecha_informe,
       oficio_permiso_funcionamiento: v.segunda_oficio_permiso_funcionamiento,
@@ -129,10 +116,7 @@ function revisionVigente(v: ViviendaRow) {
     }
   }
   return {
-    resolucion: v.primera_resolucion,
-    fecha: v.primera_fecha,
     revisado_por: v.primera_revisado_por,
-    observaciones: v.primera_observaciones,
     oficio_informe_regional: v.primera_oficio_informe_regional,
     fecha_informe: v.primera_fecha_informe,
     oficio_permiso_funcionamiento: v.primera_oficio_permiso_funcionamiento,
@@ -140,61 +124,117 @@ function revisionVigente(v: ViviendaRow) {
   }
 }
 
+const COLUMNAS_COMPENDIO: { key: string; header: string }[] = [
+  { key: 'codigo_cfia', header: 'Código CFIA' },
+  { key: 'codigo_apc', header: 'Código APC' },
+  { key: 'nombre_proyecto', header: 'Nombre del proyecto' },
+  { key: 'tipo_ingreso', header: 'Tipo de ingreso' },
+  { key: 'dias_decreto', header: 'Días decreto' },
+  { key: 'propietario', header: 'Propietario' },
+  { key: 'ruta_nacional', header: 'Ruta' },
+  { key: 'catastro', header: 'Catastro' },
+  { key: 'coordenadas', header: 'Coordenadas' },
+  { key: 'regional', header: 'Regional' },
+  { key: 'primera_resolucion', header: 'Resolución' },
+  { key: 'primera_fecha_resolucion', header: 'Fecha de resolución' },
+  { key: 'primera_inicio', header: 'Inicio' },
+  { key: 'primera_vencimiento', header: 'Vencimiento' },
+  { key: 'primera_observaciones', header: 'Observaciones' },
+  { key: 'segunda_resolucion', header: 'Resolución' },
+  { key: 'segunda_fecha_resolucion', header: 'Fecha de resolución' },
+  { key: 'segunda_inicio', header: 'Inicio' },
+  { key: 'segunda_vencimiento', header: 'Vencimiento' },
+  { key: 'segunda_observaciones', header: 'Observaciones' },
+  { key: 'tercera_resolucion', header: 'Resolución' },
+  { key: 'tercera_fecha_resolucion', header: 'Fecha de resolución' },
+  { key: 'tercera_inicio', header: 'Inicio' },
+  { key: 'tercera_vencimiento', header: 'Vencimiento' },
+  { key: 'tercera_observaciones', header: 'Observaciones' },
+  { key: 'revisado_por', header: 'Revisado por' },
+  { key: 'oficio_informe_regional', header: 'Oficio o informe de regional' },
+  { key: 'fecha_informe', header: 'Fecha informe' },
+  { key: 'oficio_funcionamiento', header: 'Oficio permiso de funcionamiento' },
+  { key: 'fecha_funcionamiento', header: 'Fecha permiso de funcionamiento' },
+]
+
+/** Columnas (1-based, inclusive) que ocupa cada bloque de revisión en COLUMNAS_COMPENDIO. */
+const GRUPOS_REVISION: { desde: number; hasta: number; titulo: string; color: string }[] = [
+  { desde: 11, hasta: 15, titulo: 'Primera Revisión', color: COLOR_PRIMERA },
+  { desde: 16, hasta: 20, titulo: 'Segunda Revisión', color: COLOR_SEGUNDA },
+  { desde: 21, hasta: 25, titulo: 'Tercera Revisión', color: COLOR_TERCERA },
+]
+
 export async function exportCompendio(viviendas: ViviendaRow[]) {
   const workbook = new ExcelJS.Workbook()
   const sheet = workbook.addWorksheet('Copilado')
-  sheet.columns = [
-    { header: 'ID', key: 'id' },
-    { header: 'Código CFIA', key: 'codigo_cfia' },
-    { header: 'Código APC', key: 'codigo_apc' },
-    { header: 'Nombre del proyecto', key: 'nombre_proyecto' },
-    { header: 'Tipo de ingreso', key: 'tipo_ingreso' },
-    { header: 'Días decreto', key: 'dias_decreto' },
-    { header: 'Inicio', key: 'fecha_inicio' },
-    { header: 'Vencimiento', key: 'fecha_vencimiento' },
-    { header: 'Propietario', key: 'propietario' },
-    { header: 'Ruta', key: 'ruta_nacional' },
-    { header: 'Catastro', key: 'catastro' },
-    { header: 'Coordenadas', key: 'coordenadas' },
-    { header: 'Regional', key: 'regional' },
-    { header: 'Resolución', key: 'resolucion' },
-    { header: 'Fecha de resolución', key: 'fecha_resolucion' },
-    { header: 'Revisado por', key: 'revisado_por' },
-    { header: 'Oficio o informe de regional', key: 'oficio_informe_regional' },
-    { header: 'Fecha informe', key: 'fecha_informe' },
-    { header: 'Oficio permiso de funcionamiento', key: 'oficio_funcionamiento' },
-    { header: 'Fecha permiso de funcionamiento', key: 'fecha_funcionamiento' },
-    { header: 'Observaciones', key: 'observaciones' },
-  ]
+  sheet.columns = COLUMNAS_COMPENDIO.map((c) => ({ key: c.key, width: 22 }))
+
+  // Fila 1: banner con el título general y el nombre de cada revisión sobre su bloque de columnas.
+  const filaTitulo = sheet.getRow(1)
+  filaTitulo.height = 21
+  for (let col = 1; col <= 10; col++) {
+    filaTitulo.getCell(col).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: COLOR_PRIMERA } }
+  }
+  filaTitulo.getCell(1).value = 'Viviendas Unifamiliares'
+  filaTitulo.getCell(1).font = { bold: true, size: 16, color: { argb: 'FFFFFFFF' }, name: 'Calibri' }
+  for (const grupo of GRUPOS_REVISION) {
+    sheet.mergeCells(1, grupo.desde, 1, grupo.hasta)
+    const celda = filaTitulo.getCell(grupo.desde)
+    celda.value = grupo.titulo
+    celda.font = { bold: true, size: 14, color: { argb: 'FFFFFFFF' }, name: 'Calibri' }
+    celda.alignment = { horizontal: 'center', vertical: 'middle' }
+    for (let col = grupo.desde; col <= grupo.hasta; col++) {
+      filaTitulo.getCell(col).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: grupo.color } }
+    }
+  }
+
+  // Fila 2: encabezados de columna, con el color del bloque de revisión que les corresponde.
+  const filaEncabezado = sheet.getRow(2)
+  COLUMNAS_COMPENDIO.forEach((c, i) => {
+    const col = i + 1
+    const grupo = GRUPOS_REVISION.find((g) => col >= g.desde && col <= g.hasta)
+    const celda = filaEncabezado.getCell(col)
+    celda.value = c.header
+    celda.font = { bold: true, size: 11, color: { argb: 'FFFFFFFF' }, name: 'Calibri' }
+    celda.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: grupo?.color ?? COLOR_PRIMERA } }
+  })
 
   for (const v of viviendas) {
-    const r = revisionVigente(v)
+    const admin = datosAdministrativosVigentes(v)
     sheet.addRow({
-      id: v.id,
       codigo_cfia: v.codigo_cfia,
       codigo_apc: v.codigo_apc,
       nombre_proyecto: v.nombre_proyecto,
       tipo_ingreso: v.tipo_ingreso,
       dias_decreto: v.dias_decreto,
-      fecha_inicio: v.fecha_inicio,
-      fecha_vencimiento: v.fecha_vencimiento,
       propietario: v.propietario,
       ruta_nacional: v.ruta_nacional,
       catastro: v.catastro,
       coordenadas: v.coordenadas_raw,
       regional: v.regionales?.nombre ?? null,
-      resolucion: r.resolucion,
-      fecha_resolucion: r.fecha,
-      revisado_por: r.revisado_por,
-      oficio_informe_regional: r.oficio_informe_regional,
-      fecha_informe: r.fecha_informe,
-      oficio_funcionamiento: r.oficio_permiso_funcionamiento,
-      fecha_funcionamiento: r.fecha_permiso_funcionamiento,
-      observaciones: r.observaciones,
+      primera_resolucion: v.primera_resolucion,
+      primera_fecha_resolucion: v.primera_fecha,
+      primera_inicio: v.fecha_inicio,
+      primera_vencimiento: v.fecha_vencimiento,
+      primera_observaciones: v.primera_observaciones,
+      segunda_resolucion: v.segunda_resolucion,
+      segunda_fecha_resolucion: v.segunda_fecha,
+      segunda_inicio: v.segunda_fecha_inicio,
+      segunda_vencimiento: v.segunda_fecha_vencimiento,
+      segunda_observaciones: v.segunda_observaciones,
+      tercera_resolucion: v.tercera_resolucion,
+      tercera_fecha_resolucion: v.tercera_fecha,
+      tercera_inicio: v.tercera_fecha_inicio,
+      tercera_vencimiento: v.tercera_fecha_vencimiento,
+      tercera_observaciones: v.tercera_observaciones,
+      revisado_por: admin.revisado_por,
+      oficio_informe_regional: admin.oficio_informe_regional,
+      fecha_informe: admin.fecha_informe,
+      oficio_funcionamiento: admin.oficio_permiso_funcionamiento,
+      fecha_funcionamiento: admin.fecha_permiso_funcionamiento,
     })
   }
 
-  estiloEncabezado(sheet)
   await descargarWorkbook(workbook, 'Proyectos Copilado.xlsx')
 }
 
