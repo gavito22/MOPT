@@ -55,7 +55,7 @@ onMounted(async () => {
   regionales.value = await api.listRegionales(true)
 
   if (!mapaEl.value) return
-  mapa = L.map(mapaEl.value).setView([lat.value, lng.value], tienePunto.value ? 13 : 8)
+  mapa = L.map(mapaEl.value).setView([lat.value, lng.value], tienePunto.value ? 17 : 8)
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© OpenStreetMap',
     crossOrigin: true,

@@ -1,3 +1,4 @@
+import type { User } from '@supabase/supabase-js'
 import { supabase } from './supabase'
 import type {
   DatosCrudosRow,
@@ -11,6 +12,15 @@ import type {
   RevisionCampos,
   DatosAdicionalesCampos,
 } from './database.types'
+
+/**
+ * Nombre para mostrar del usuario autenticado: usa el nombre configurado en
+ * "User Metadata" (campo "full_name" o "name") y si no existe, cae al correo.
+ */
+export function nombreUsuario(user: User | null | undefined): string | null {
+  const meta = user?.user_metadata as { full_name?: string; name?: string } | undefined
+  return meta?.full_name || meta?.name || user?.email || null
+}
 
 // ---------- Datos crudos ----------
 
@@ -111,7 +121,7 @@ export async function crearVivienda(campos: DatosApcCampos, datoCrudoId?: string
     ...campos,
     datos_crudos_id: datoCrudoId ?? null,
     tipo_ingreso: 'Primer ingreso',
-    created_by: userData.user?.email ?? null,
+    created_by: nombreUsuario(userData.user),
   }
 
   const { data, error } = await supabase.from('viviendas').insert(nueva).select().single()
@@ -121,16 +131,7 @@ export async function crearVivienda(campos: DatosApcCampos, datoCrudoId?: string
     await supabase.from('datos_crudos').update({ procesado: true }).eq('id', datoCrudoId)
   }
 
-  const { data: items } = await supabase
-    .from('checklist_items')
-    .select('*')
-    .eq('activo', true)
-    .order('orden')
-  if (items?.length) {
-    await supabase.from('vivienda_checklist').insert(
-      items.map((item) => ({ vivienda_id: data.id, checklist_item_id: item.id })),
-    )
-  }
+  await crearChecklistParaRevision(data.id, 1)
 
   return data as ViviendaRow
 }
@@ -200,7 +201,7 @@ export async function guardarRevision(id: string, numero: NumeroRevision, campos
     [`${p}_resolucion`]: campos.resolucion,
     [CAMPO_FECHA_INICIO[numero]]: campos.fecha_inicio || null,
     [CAMPO_FECHA_VENCIMIENTO[numero]]: campos.fecha_vencimiento || null,
-    [`${p}_revisado_por`]: userData.user?.email ?? null,
+    [`${p}_revisado_por`]: nombreUsuario(userData.user),
     [`${p}_fecha`]: campos.fecha || new Date().toISOString(),
   }
   if (campos.resolucion === 'Rechazado') cambios.tipo_ingreso = SIGUIENTE_INGRESO[numero]
@@ -226,13 +227,63 @@ export async function listChecklistItems(soloActivos = true) {
   return data as ChecklistItemRow[]
 }
 
-export async function listViviendaChecklist(viviendaId: string) {
+export async function listViviendaChecklist(viviendaId: string, numeroRevision: NumeroRevision) {
   const { data, error } = await supabase
     .from('vivienda_checklist')
     .select('*, checklist_items(nombre, orden)')
     .eq('vivienda_id', viviendaId)
+    .eq('numero_revision', numeroRevision)
   if (error) throw error
   return data as (ViviendaChecklistRow & { checklist_items: { nombre: string; orden: number } })[]
+}
+
+/**
+ * Crea el check list de una revisión de la vivienda.
+ * - Primera revisión: copia todos los ítems activos.
+ * - Segunda/Tercera: solo hereda los ítems que quedaron "No cumple" en la revisión
+ *   anterior (más "Otros", que siempre se incluye), arrastrando su observación.
+ */
+export async function crearChecklistParaRevision(viviendaId: string, numeroRevision: NumeroRevision) {
+  if (numeroRevision === 1) {
+    const { data: items } = await supabase
+      .from('checklist_items')
+      .select('*')
+      .eq('activo', true)
+      .order('orden')
+    if (!items?.length) return
+    const { error } = await supabase.from('vivienda_checklist').insert(
+      items.map((item) => ({
+        vivienda_id: viviendaId,
+        checklist_item_id: item.id,
+        numero_revision: numeroRevision,
+      })),
+    )
+    if (error) throw error
+    return
+  }
+
+  const anterior = (numeroRevision - 1) as NumeroRevision
+  const { data: previos, error: errPrevios } = await supabase
+    .from('vivienda_checklist')
+    .select('*, checklist_items(nombre, orden)')
+    .eq('vivienda_id', viviendaId)
+    .eq('numero_revision', anterior)
+  if (errPrevios) throw errPrevios
+
+  const heredados = (previos ?? []).filter(
+    (p) => p.estado === 'No cumple' || p.checklist_items?.nombre === 'Otros',
+  )
+  if (!heredados.length) return
+
+  const { error } = await supabase.from('vivienda_checklist').insert(
+    heredados.map((p) => ({
+      vivienda_id: viviendaId,
+      checklist_item_id: p.checklist_item_id,
+      numero_revision: numeroRevision,
+      observacion: p.observacion,
+    })),
+  )
+  if (error) throw error
 }
 
 export async function actualizarRespuestaChecklist(
@@ -334,7 +385,7 @@ export async function subirAdjunto(viviendaId: string, file: File) {
     storage_path: path,
     tipo_mime: file.type,
     tamano_bytes: file.size,
-    subido_por: userData.user?.email ?? null,
+    subido_por: nombreUsuario(userData.user),
   })
   if (error) throw error
 }

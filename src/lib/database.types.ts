@@ -116,6 +116,7 @@ export interface ViviendaChecklistRow {
   id: string
   vivienda_id: string
   checklist_item_id: string
+  numero_revision: NumeroRevision
   estado: EstadoChecklist | null
   observacion: string | null
 }

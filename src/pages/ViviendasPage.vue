@@ -112,8 +112,12 @@ async function onExportarExcel() {
 
 async function onExportarFicha(viviendaId: string) {
   const vivienda = await api.getVivienda(viviendaId)
-  const checklist = await api.listViviendaChecklist(viviendaId)
-  await exportFichaPdf(vivienda, checklist)
+  const [checklist1, checklist2, checklist3] = await Promise.all([
+    api.listViviendaChecklist(viviendaId, 1),
+    api.listViviendaChecklist(viviendaId, 2),
+    api.listViviendaChecklist(viviendaId, 3),
+  ])
+  await exportFichaPdf(vivienda, { 1: checklist1, 2: checklist2, 3: checklist3 })
 }
 
 // ---------- Eliminar ----------

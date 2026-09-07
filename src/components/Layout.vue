@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { Menu, Home, Settings, Sun, Moon, LogOut } from '@lucide/vue'
 import { useCurrentUser } from '@/lib/useCurrentUser'
 import { useDarkMode } from '@/lib/useDarkMode'
+import { nombreUsuario } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
 const sidebarOpen = ref(true)
@@ -12,7 +13,7 @@ const router = useRouter()
 const { session, signOut } = useCurrentUser()
 const { isDark, toggle } = useDarkMode()
 
-const userEmail = computed(() => session.value?.user.email ?? '')
+const userEmail = computed(() => nombreUsuario(session.value?.user) ?? '')
 
 async function logout() {
   await signOut()

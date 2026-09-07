@@ -2,21 +2,30 @@
 import { useQuery, useQueryClient } from '@tanstack/vue-query'
 import * as api from '@/lib/api'
 import { cn } from '@/lib/utils'
-import type { EstadoChecklist } from '@/lib/database.types'
+import type { EstadoChecklist, NumeroRevision } from '@/lib/database.types'
 
-const props = defineProps<{ viviendaId: string }>()
+const props = defineProps<{ viviendaId: string; numeroRevision: NumeroRevision }>()
 
 const queryClient = useQueryClient()
 
-const { data: respuestas } = useQuery({
-  queryKey: ['checklist', props.viviendaId],
-  queryFn: () => api.listViviendaChecklist(props.viviendaId),
+const queryKey = ['checklist', props.viviendaId, props.numeroRevision]
+
+const { data: respuestas, error, isLoading } = useQuery({
+  queryKey,
+  queryFn: async () => {
+    let filas = await api.listViviendaChecklist(props.viviendaId, props.numeroRevision)
+    if (filas.length === 0) {
+      await api.crearChecklistParaRevision(props.viviendaId, props.numeroRevision)
+      filas = await api.listViviendaChecklist(props.viviendaId, props.numeroRevision)
+    }
+    return filas
+  },
   select: (data) => [...data].sort((a, b) => a.checklist_items.orden - b.checklist_items.orden),
 })
 
 async function actualizarEstado(id: string, estado: EstadoChecklist) {
   await api.actualizarRespuestaChecklist(id, { estado })
-  queryClient.invalidateQueries({ queryKey: ['checklist', props.viviendaId] })
+  queryClient.invalidateQueries({ queryKey })
 }
 
 async function actualizarObservacion(id: string, observacion: string) {
@@ -26,6 +35,13 @@ async function actualizarObservacion(id: string, observacion: string) {
 
 <template>
   <div class="space-y-4">
+    <p v-if="isLoading" class="text-sm text-gray-500">Cargando…</p>
+    <p v-else-if="error" class="text-sm text-error">
+      {{ (error as { message?: string })?.message || 'No se pudo cargar el check list.' }}
+    </p>
+    <p v-else-if="!respuestas?.length" class="text-sm text-gray-500">
+      No hay ítems de check list activos. Configúralos en Configuración.
+    </p>
     <div
       v-for="r in respuestas"
       :key="r.id"

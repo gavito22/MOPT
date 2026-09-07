@@ -128,10 +128,12 @@ create table if not exists vivienda_checklist (
   id uuid primary key default gen_random_uuid(),
   vivienda_id uuid not null references viviendas (id) on delete cascade,
   checklist_item_id uuid not null references checklist_items (id),
+  numero_revision integer not null default 1 check (numero_revision in (1, 2, 3)),
   estado text check (estado in ('Cumple', 'No cumple')),
   observacion text
 );
 create index if not exists vivienda_checklist_vivienda_idx on vivienda_checklist (vivienda_id);
+create index if not exists vivienda_checklist_revision_idx on vivienda_checklist (vivienda_id, numero_revision);
 
 create table if not exists vivienda_adjuntos (
   id uuid primary key default gen_random_uuid(),

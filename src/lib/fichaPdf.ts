@@ -1,9 +1,12 @@
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import type { ViviendaRow, ViviendaChecklistRow } from './database.types'
+import type { ViviendaRow, ViviendaChecklistRow, NumeroRevision } from './database.types'
+
+type ChecklistConNombre = ViviendaChecklistRow & { checklist_items: { nombre: string; orden: number } }
 
 const MARGEN_X = 14
 const COLOR_PRIMARIO: [number, number, number] = [19, 60, 101]
+const COLOR_SECUNDARIO: [number, number, number] = [55, 96, 146]
 
 function finalY(doc: jsPDF): number {
   return (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY
@@ -66,7 +69,7 @@ async function recortarYRedondear(
   altoMm: number,
   radioMm: number,
 ): Promise<string> {
-  const escala = 4 // px por mm, buena calidad de impresión
+  const escala = 8 // px por mm, buena calidad de impresión
   const anchoPx = Math.round(anchoMm * escala)
   const altoPx = Math.round(altoMm * escala)
   const radioPx = Math.round(radioMm * escala)
@@ -103,19 +106,18 @@ async function recortarYRedondear(
 
 export async function exportFichaPdf(
   vivienda: ViviendaRow,
-  checklist: (ViviendaChecklistRow & { checklist_items: { nombre: string; orden: number } })[],
+  checklistsPorRevision: Record<NumeroRevision, ChecklistConNombre[]>,
 ) {
   const doc = new jsPDF()
   let y = 20
 
-  doc.setFontSize(16)
   doc.setTextColor(...COLOR_PRIMARIO)
+  doc.setFontSize(16)
+  doc.text(`Código CFIA: ${vivienda.codigo_cfia ?? '—'}`, MARGEN_X, y)
+  y += 7
+  doc.setFontSize(14)
   doc.text(vivienda.nombre_proyecto || 'Ficha de proyecto', MARGEN_X, y)
-  y += 6
-  doc.setFontSize(9)
-  doc.setTextColor(100, 100, 100)
-  doc.text(`Código APC: ${vivienda.codigo_apc ?? '—'}   ·   Código CFIA: ${vivienda.codigo_cfia ?? '—'}`, MARGEN_X, y)
-  y += 8
+  y += 9
 
   y = dibujarSeccion(doc, 'Datos del APC', y)
   y = tablaClaveValor(doc, y, [
@@ -164,25 +166,9 @@ export async function exportFichaPdf(
 
   y = yFinal + 8
 
-  y = dibujarSeccion(doc, 'Check list', y)
-  const checklistOrdenado = [...checklist].sort((a, b) => a.checklist_items.orden - b.checklist_items.orden)
-  autoTable(doc, {
-    startY: y,
-    margin: { left: MARGEN_X, right: MARGEN_X },
-    head: [['Ítem', 'Estado', 'Observación']],
-    body: checklistOrdenado.map((item) => [
-      item.checklist_items.nombre,
-      item.estado ?? '—',
-      item.observacion || '—',
-    ]),
-    styles: { fontSize: 9 },
-    headStyles: { fillColor: COLOR_PRIMARIO },
-  })
-  y = finalY(doc) + 6
-
-  y = dibujarSeccion(doc, 'Resultado de la revisión', y)
   const revisiones = [
     {
+      numero: 1 as NumeroRevision,
       etiqueta: 'Primera revisión',
       resolucion: vivienda.primera_resolucion,
       fecha: vivienda.primera_fecha,
@@ -191,6 +177,7 @@ export async function exportFichaPdf(
       revisado_por: vivienda.primera_revisado_por,
     },
     {
+      numero: 2 as NumeroRevision,
       etiqueta: 'Segunda revisión',
       resolucion: vivienda.segunda_resolucion,
       fecha: vivienda.segunda_fecha,
@@ -199,6 +186,7 @@ export async function exportFichaPdf(
       revisado_por: vivienda.segunda_revisado_por,
     },
     {
+      numero: 3 as NumeroRevision,
       etiqueta: 'Tercera revisión',
       resolucion: vivienda.tercera_resolucion,
       fecha: vivienda.tercera_fecha,
@@ -209,6 +197,7 @@ export async function exportFichaPdf(
   ].filter((r) => r.resolucion)
 
   if (!revisiones.length) {
+    y = dibujarSeccion(doc, 'Resultado de la revisión', y)
     doc.setFontSize(9)
     doc.setTextColor(120, 120, 120)
     doc.text('Sin revisiones registradas.', MARGEN_X, y)
@@ -216,13 +205,7 @@ export async function exportFichaPdf(
   }
 
   for (const r of revisiones) {
-    y = asegurarEspacio(doc, y, 20)
-    doc.setFontSize(9)
-    doc.setFont('helvetica', 'bold')
-    doc.setTextColor(20, 20, 20)
-    doc.text(r.etiqueta, MARGEN_X, y)
-    doc.setFont('helvetica', 'normal')
-    y += 3
+    y = dibujarSeccion(doc, r.etiqueta, y)
     autoTable(doc, {
       startY: y,
       margin: { left: MARGEN_X, right: MARGEN_X },
@@ -237,17 +220,40 @@ export async function exportFichaPdf(
         ],
       ],
       styles: { fontSize: 9 },
-      headStyles: { fillColor: COLOR_PRIMARIO },
+      headStyles: { fillColor: COLOR_SECUNDARIO },
     })
     y = finalY(doc) + 6
+
+    const checklist = [...(checklistsPorRevision[r.numero] ?? [])].sort(
+      (a, b) => a.checklist_items.orden - b.checklist_items.orden,
+    )
+    if (checklist.length) {
+      y = asegurarEspacio(doc, y, 12)
+      autoTable(doc, {
+        startY: y,
+        margin: { left: MARGEN_X, right: MARGEN_X },
+        head: [['Ítem', 'Estado', 'Observación']],
+        body: checklist.map((item) => [item.checklist_items.nombre, item.estado ?? '—', item.observacion || '—']),
+        styles: { fontSize: 9 },
+        headStyles: { fillColor: COLOR_SECUNDARIO },
+      })
+      y = finalY(doc) + 6
+    }
   }
 
-  y = dibujarSeccion(doc, 'Información adicional', y)
-  y = tablaClaveValor(doc, y, [
-    ['Permiso de ejecución y funcionamiento', vivienda.permiso_ejecucion_funcionamiento ?? '—'],
-    ['Fecha permiso de ejecución y funcionamiento', vivienda.fecha_permiso_ejecucion_funcionamiento ?? '—'],
-    ['Observaciones', vivienda.observaciones ?? '—'],
-  ])
+  const algunaAprobada =
+    vivienda.primera_resolucion === 'Aprobado' ||
+    vivienda.segunda_resolucion === 'Aprobado' ||
+    vivienda.tercera_resolucion === 'Aprobado'
+
+  if (algunaAprobada) {
+    y = dibujarSeccion(doc, 'Permiso de ejecución y funcionamiento', y)
+    y = tablaClaveValor(doc, y, [
+      ['Permiso de ejecución y funcionamiento', vivienda.permiso_ejecucion_funcionamiento ?? '—'],
+      ['Fecha permiso de ejecución y funcionamiento', vivienda.fecha_permiso_ejecucion_funcionamiento ?? '—'],
+      ['Observaciones', vivienda.observaciones ?? '—'],
+    ])
+  }
 
   const nombreArchivo = `Ficha - ${vivienda.codigo_apc ?? vivienda.id} - ${vivienda.nombre_proyecto ?? ''}.pdf`
   doc.save(nombreArchivo)

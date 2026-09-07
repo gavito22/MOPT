@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { useQuery, useQueryClient } from '@tanstack/vue-query'
 import { Plus, Pencil, Check, X, Trash2 } from '@lucide/vue'
 import * as api from '@/lib/api'
+import { regenerarTodosLosMapas } from '@/lib/regenerarMapas'
 import ConfirmModal from '@/components/ConfirmModal.vue'
 
 const queryClient = useQueryClient()
@@ -77,6 +78,33 @@ async function confirmarEliminarItem() {
   await api.eliminarChecklistItem(itemAEliminar.value.id)
   itemAEliminar.value = null
   queryClient.invalidateQueries({ queryKey: ['checklist-items-config'] })
+}
+
+// ---------- Mantenimiento ----------
+const regenerando = ref(false)
+const progresoMapas = ref({ hechos: 0, total: 0 })
+const resultadoMapas = ref('')
+
+async function onRegenerarMapas() {
+  regenerando.value = true
+  resultadoMapas.value = ''
+  progresoMapas.value = { hechos: 0, total: 0 }
+  try {
+    const viviendas = await api.listViviendas({})
+    const { ok, fallidas } = await regenerarTodosLosMapas(viviendas, (hechos, total) => {
+      progresoMapas.value = { hechos, total }
+    })
+    resultadoMapas.value = `${ok} mapa(s) regenerado(s).`
+    if (fallidas.length) {
+      resultadoMapas.value += ` Fallaron (${fallidas.length}): ${fallidas
+        .map((v) => v.nombre_proyecto || v.codigo_apc || v.id)
+        .join(', ')}.`
+    }
+  } catch (err) {
+    resultadoMapas.value = (err as { message?: string } | null)?.message || 'No se pudo regenerar los mapas.'
+  } finally {
+    regenerando.value = false
+  }
 }
 </script>
 
@@ -160,6 +188,23 @@ async function confirmarEliminarItem() {
           </li>
         </ul>
       </div>
+    </div>
+
+    <div class="bg-surface rounded-lg shadow p-4 space-y-3">
+      <h2 class="font-semibold">Mantenimiento</h2>
+      <p class="text-sm text-gray-500">
+        Vuelve a generar la imagen del mapa (más cercana y con mejor calidad) para todos los proyectos que ya
+        tienen una ubicación guardada.
+      </p>
+      <button
+        type="button"
+        class="bg-primary text-white px-4 py-2 rounded-lg shadow-sm text-sm"
+        :disabled="regenerando"
+        @click="onRegenerarMapas"
+      >
+        {{ regenerando ? `Regenerando ${progresoMapas.hechos}/${progresoMapas.total}…` : 'Regenerar mapas' }}
+      </button>
+      <p v-if="resultadoMapas" class="text-sm text-gray-500">{{ resultadoMapas }}</p>
     </div>
 
     <ConfirmModal

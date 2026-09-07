@@ -5,23 +5,19 @@ import { X } from '@lucide/vue'
 import * as api from '@/lib/api'
 import DatosApcTab from './DatosApcTab.vue'
 import UbicacionTab from './UbicacionTab.vue'
-import ChecklistTab from './ChecklistTab.vue'
-import RevisionesTab from './RevisionesTab.vue'
-import type { ViviendaRow } from '@/lib/database.types'
+import RevisionTab from './RevisionTab.vue'
+import PermisoTab from './PermisoTab.vue'
+import type { ViviendaRow, NumeroRevision, Resolucion } from '@/lib/database.types'
 
 const props = defineProps<{ open: boolean; viviendaId: string | null }>()
 const emit = defineEmits<{ close: []; guardado: [] }>()
 
 const queryClient = useQueryClient()
 
-const activeTab = ref<'apc' | 'ubicacion' | 'checklist' | 'revisiones'>('apc')
+type TabKey = 'apc' | 'ubicacion' | 'revision1' | 'revision2' | 'revision3' | 'permiso'
+
+const activeTab = ref<TabKey>('apc')
 const idInterno = ref<string | null>(props.viviendaId)
-const tabs = [
-  { key: 'apc', label: 'Datos del APC' },
-  { key: 'ubicacion', label: 'Ubicación' },
-  { key: 'checklist', label: 'Check list' },
-  { key: 'revisiones', label: 'Revisiones' },
-] as const
 
 watch(
   () => props.open,
@@ -39,6 +35,27 @@ const { data: vivienda, refetch } = useQuery({
   enabled: computed(() => !!idInterno.value),
 })
 
+const titulo = computed(() => {
+  const v = vivienda.value
+  if (!v) return 'Nueva vivienda'
+  return [v.codigo_cfia, v.nombre_proyecto].filter(Boolean).join(' - ') || 'Vivienda sin nombre'
+})
+
+const tabs = computed(() => {
+  const v = vivienda.value
+  const lista: { key: TabKey; label: string }[] = [
+    { key: 'apc', label: 'Datos del APC' },
+    { key: 'ubicacion', label: 'Ubicación' },
+    { key: 'revision1', label: 'Primera Revisión' },
+  ]
+  if (v?.primera_resolucion === 'Rechazado') lista.push({ key: 'revision2', label: 'Segunda Revisión' })
+  if (v?.segunda_resolucion === 'Rechazado') lista.push({ key: 'revision3', label: 'Tercera Revisión' })
+  if (v?.primera_resolucion === 'Aprobado' || v?.segunda_resolucion === 'Aprobado' || v?.tercera_resolucion === 'Aprobado') {
+    lista.push({ key: 'permiso', label: 'Permiso' })
+  }
+  return lista
+})
+
 function onCreada(nueva: ViviendaRow) {
   idInterno.value = nueva.id
   queryClient.setQueryData(['vivienda', nueva.id], nueva)
@@ -49,6 +66,18 @@ function onCreada(nueva: ViviendaRow) {
 function onActualizada() {
   refetch()
   emit('guardado')
+}
+
+async function onRevisionActualizada(numero: NumeroRevision, resolucion: Resolucion) {
+  await refetch()
+  emit('guardado')
+  if (resolucion === 'Aprobado') {
+    activeTab.value = 'permiso'
+  } else if (numero === 1) {
+    activeTab.value = 'revision2'
+  } else if (numero === 2) {
+    activeTab.value = 'revision3'
+  }
 }
 
 function cerrar() {
@@ -62,7 +91,7 @@ function cerrar() {
       <div class="bg-surface rounded-lg shadow-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto">
         <div class="flex items-center justify-between px-6 py-4 border-b sticky top-0 bg-surface z-10">
           <h2 class="text-xl font-bold text-primary">
-            {{ vivienda?.nombre_proyecto || 'Nueva vivienda' }}
+            {{ titulo }}
           </h2>
           <button class="p-1.5 rounded-lg hover:bg-neutral" @click="cerrar">
             <X class="size-5" />
@@ -70,7 +99,7 @@ function cerrar() {
         </div>
 
         <div class="px-6 pt-4">
-          <div class="flex gap-2 border-b">
+          <div class="flex gap-2 border-b flex-wrap">
             <button
               v-for="t in tabs"
               :key="t.key"
@@ -96,13 +125,25 @@ function cerrar() {
           />
           <template v-else-if="vivienda">
             <UbicacionTab v-if="activeTab === 'ubicacion'" :vivienda="vivienda" @guardado="refetch()" />
-            <ChecklistTab v-else-if="activeTab === 'checklist'" :vivienda-id="vivienda.id" />
-            <RevisionesTab
-              v-else-if="activeTab === 'revisiones'"
+            <RevisionTab
+              v-else-if="activeTab === 'revision1'"
               :vivienda="vivienda"
-              @actualizado="refetch()"
-              @cerrar="cerrar"
+              :numero="1"
+              @actualizado="onRevisionActualizada"
             />
+            <RevisionTab
+              v-else-if="activeTab === 'revision2'"
+              :vivienda="vivienda"
+              :numero="2"
+              @actualizado="onRevisionActualizada"
+            />
+            <RevisionTab
+              v-else-if="activeTab === 'revision3'"
+              :vivienda="vivienda"
+              :numero="3"
+              @actualizado="onRevisionActualizada"
+            />
+            <PermisoTab v-else-if="activeTab === 'permiso'" :vivienda="vivienda" @actualizado="refetch()" />
           </template>
         </div>
       </div>
