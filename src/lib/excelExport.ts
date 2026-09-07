@@ -9,6 +9,15 @@ function parseFechaCR(valor: unknown): string | null {
   return `${y}-${mo.padStart(2, '0')}-${d.padStart(2, '0')}`
 }
 
+/** "2026-08-09" (o con hora, tipo timestamptz) -> "09/08/2026". */
+function formatoFechaCR(valor: string | null | undefined): string | null {
+  if (!valor) return null
+  const m = valor.slice(0, 10).match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (!m) return valor
+  const [, y, mo, d] = m
+  return `${d}/${mo}/${y}`
+}
+
 function cellText(value: ExcelJS.CellValue): string | null {
   if (value === null || value === undefined) return null
   if (typeof value === 'object' && 'text' in (value as { text?: string })) {
@@ -183,23 +192,23 @@ export async function exportCompendio(viviendas: ViviendaRow[]) {
       ruta_nacional: v.ruta_nacional,
       catastro: v.catastro,
       coordenadas: v.coordenadas_raw,
-      primera_inicio: v.fecha_inicio,
-      primera_vencimiento: v.fecha_vencimiento,
+      primera_inicio: formatoFechaCR(v.fecha_inicio),
+      primera_vencimiento: formatoFechaCR(v.fecha_vencimiento),
       primera_resolucion: v.primera_resolucion,
-      primera_fecha_resolucion: v.primera_fecha,
+      primera_fecha_resolucion: formatoFechaCR(v.primera_fecha),
       primera_revisado_por: v.primera_revisado_por,
-      segunda_inicio: v.segunda_fecha_inicio,
-      segunda_vencimiento: v.segunda_fecha_vencimiento,
+      segunda_inicio: formatoFechaCR(v.segunda_fecha_inicio),
+      segunda_vencimiento: formatoFechaCR(v.segunda_fecha_vencimiento),
       segunda_resolucion: v.segunda_resolucion,
-      segunda_fecha_resolucion: v.segunda_fecha,
+      segunda_fecha_resolucion: formatoFechaCR(v.segunda_fecha),
       segunda_revisado_por: v.segunda_revisado_por,
-      tercera_inicio: v.tercera_fecha_inicio,
-      tercera_vencimiento: v.tercera_fecha_vencimiento,
+      tercera_inicio: formatoFechaCR(v.tercera_fecha_inicio),
+      tercera_vencimiento: formatoFechaCR(v.tercera_fecha_vencimiento),
       tercera_resolucion: v.tercera_resolucion,
-      tercera_fecha_resolucion: v.tercera_fecha,
+      tercera_fecha_resolucion: formatoFechaCR(v.tercera_fecha),
       tercera_revisado_por: v.tercera_revisado_por,
       permiso_ejecucion_funcionamiento: v.permiso_ejecucion_funcionamiento,
-      fecha_permiso_ejecucion_funcionamiento: v.fecha_permiso_ejecucion_funcionamiento,
+      fecha_permiso_ejecucion_funcionamiento: formatoFechaCR(v.fecha_permiso_ejecucion_funcionamiento),
       regional: v.regionales?.nombre ?? null,
       observaciones: v.observaciones,
       ficha: null,
