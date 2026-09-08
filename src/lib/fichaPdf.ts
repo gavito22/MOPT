@@ -255,6 +255,6 @@ export async function exportFichaPdf(
     ])
   }
 
-  const nombreArchivo = `Ficha - ${vivienda.codigo_apc ?? vivienda.id} - ${vivienda.nombre_proyecto ?? ''}.pdf`
+  const nombreArchivo = `Ficha - ${vivienda.codigo_cfia ?? vivienda.id} - ${vivienda.nombre_proyecto ?? ''}.pdf`
   doc.save(nombreArchivo)
 }

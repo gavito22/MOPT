@@ -61,10 +61,11 @@ const ESTADOS_PENDIENTES: Estado[] = [
 const kpis = computed(() => {
   const items = viviendas.value ?? []
   const pendientes = items.filter((v) => ESTADOS_PENDIENTES.includes(v.estado)).length
+  const aprobados = items.filter((v) => v.estado.startsWith('Aprobado')).length
   return {
     total: items.length,
     pendientes,
-    revisados: items.length - pendientes,
+    aprobados,
   }
 })
 
@@ -198,8 +199,8 @@ function onGuardadoModal() {
         <p class="text-sm text-gray-500">Pendientes</p>
       </div>
       <div class="bg-surface rounded-lg shadow p-4">
-        <p class="text-3xl font-bold text-success">{{ kpis.revisados }}</p>
-        <p class="text-sm text-gray-500">Revisados</p>
+        <p class="text-3xl font-bold text-success">{{ kpis.aprobados }}</p>
+        <p class="text-sm text-gray-500">Aprobados</p>
       </div>
     </div>
 
