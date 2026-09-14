@@ -241,20 +241,6 @@ export async function exportFichaPdf(
     }
   }
 
-  const algunaAprobada =
-    vivienda.primera_resolucion === 'Aprobado' ||
-    vivienda.segunda_resolucion === 'Aprobado' ||
-    vivienda.tercera_resolucion === 'Aprobado'
-
-  if (algunaAprobada) {
-    y = dibujarSeccion(doc, 'Permiso de ejecución y funcionamiento', y)
-    y = tablaClaveValor(doc, y, [
-      ['Permiso de ejecución y funcionamiento', vivienda.permiso_ejecucion_funcionamiento ?? '—'],
-      ['Fecha permiso de ejecución y funcionamiento', vivienda.fecha_permiso_ejecucion_funcionamiento ?? '—'],
-      ['Observaciones', vivienda.observaciones ?? '—'],
-    ])
-  }
-
   const nombreArchivo = `Ficha - ${vivienda.codigo_cfia ?? vivienda.id} - ${vivienda.nombre_proyecto ?? ''}.pdf`
   doc.save(nombreArchivo)
 }
