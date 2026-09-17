@@ -8,6 +8,15 @@ const MARGEN_X = 14
 const COLOR_PRIMARIO: [number, number, number] = [19, 60, 101]
 const COLOR_SECUNDARIO: [number, number, number] = [55, 96, 146]
 
+/** "2026-08-09" (o con hora, tipo timestamptz) -> "09/08/2026". */
+function formatoFechaCR(valor: string | null | undefined): string | null {
+  if (!valor) return null
+  const m = valor.slice(0, 10).match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (!m) return valor
+  const [, y, mo, d] = m
+  return `${d}/${mo}/${y}`
+}
+
 function finalY(doc: jsPDF): number {
   return (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY
 }
@@ -213,9 +222,9 @@ export async function exportFichaPdf(
       body: [
         [
           r.resolucion ?? '—',
-          r.fecha?.slice(0, 10) ?? '—',
-          r.fecha_inicio ?? '—',
-          r.fecha_vencimiento ?? '—',
+          formatoFechaCR(r.fecha) ?? '—',
+          formatoFechaCR(r.fecha_inicio) ?? '—',
+          formatoFechaCR(r.fecha_vencimiento) ?? '—',
           r.revisado_por || '—',
         ],
       ],
