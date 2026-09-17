@@ -131,7 +131,7 @@ export async function crearVivienda(campos: DatosApcCampos, datoCrudoId?: string
     await supabase.from('datos_crudos').update({ procesado: true }).eq('id', datoCrudoId)
   }
 
-  await crearChecklistParaRevision(data.id, 1)
+  await sincronizarChecklistRevision(data.id, 1)
 
   return data as ViviendaRow
 }
@@ -238,49 +238,60 @@ export async function listViviendaChecklist(viviendaId: string, numeroRevision: 
 }
 
 /**
- * Crea el check list de una revisión de la vivienda.
- * - Primera revisión: copia todos los ítems activos.
- * - Segunda/Tercera: solo hereda los ítems que quedaron "No cumple" en la revisión
- *   anterior (más "Otros", que siempre se incluye), arrastrando su observación.
+ * Sincroniza el check list de una revisión: agrega los ítems que falten, sin borrar
+ * ni pisar respuestas que ya estén guardadas en esta revisión. Pensada para llamarse
+ * cada vez que se abre la pestaña de checklist, no solo la primera vez, porque los
+ * campos de revisiones anteriores se pueden seguir editando después.
+ * - Primera revisión: la fuente son los ítems de checklist activos.
+ * - Segunda/Tercera: la fuente son los ítems "No cumple" de la revisión anterior
+ *   (más "Otros", que siempre se incluye), arrastrando su observación.
  */
-export async function crearChecklistParaRevision(viviendaId: string, numeroRevision: NumeroRevision) {
+export async function sincronizarChecklistRevision(viviendaId: string, numeroRevision: NumeroRevision) {
+  const { data: actuales, error: errActuales } = await supabase
+    .from('vivienda_checklist')
+    .select('checklist_item_id')
+    .eq('vivienda_id', viviendaId)
+    .eq('numero_revision', numeroRevision)
+  if (errActuales) throw errActuales
+  const yaExisten = new Set((actuales ?? []).map((a) => a.checklist_item_id))
+
+  let porAgregar: { checklist_item_id: string; observacion?: string | null }[]
+
   if (numeroRevision === 1) {
-    const { data: items } = await supabase
+    const { data: items, error: errItems } = await supabase
       .from('checklist_items')
       .select('*')
       .eq('activo', true)
       .order('orden')
-    if (!items?.length) return
-    const { error } = await supabase.from('vivienda_checklist').insert(
-      items.map((item) => ({
-        vivienda_id: viviendaId,
-        checklist_item_id: item.id,
-        numero_revision: numeroRevision,
-      })),
-    )
-    if (error) throw error
-    return
+    if (errItems) throw errItems
+    porAgregar = (items ?? [])
+      .filter((item) => !yaExisten.has(item.id))
+      .map((item) => ({ checklist_item_id: item.id }))
+  } else {
+    const anterior = (numeroRevision - 1) as NumeroRevision
+    const { data: previos, error: errPrevios } = await supabase
+      .from('vivienda_checklist')
+      .select('*, checklist_items(nombre, orden)')
+      .eq('vivienda_id', viviendaId)
+      .eq('numero_revision', anterior)
+    if (errPrevios) throw errPrevios
+    porAgregar = (previos ?? [])
+      .filter(
+        (p) =>
+          (p.estado === 'No cumple' || p.checklist_items?.nombre === 'Otros') &&
+          !yaExisten.has(p.checklist_item_id),
+      )
+      .map((p) => ({ checklist_item_id: p.checklist_item_id, observacion: p.observacion }))
   }
 
-  const anterior = (numeroRevision - 1) as NumeroRevision
-  const { data: previos, error: errPrevios } = await supabase
-    .from('vivienda_checklist')
-    .select('*, checklist_items(nombre, orden)')
-    .eq('vivienda_id', viviendaId)
-    .eq('numero_revision', anterior)
-  if (errPrevios) throw errPrevios
-
-  const heredados = (previos ?? []).filter(
-    (p) => p.estado === 'No cumple' || p.checklist_items?.nombre === 'Otros',
-  )
-  if (!heredados.length) return
+  if (!porAgregar.length) return
 
   const { error } = await supabase.from('vivienda_checklist').insert(
-    heredados.map((p) => ({
+    porAgregar.map((p) => ({
       vivienda_id: viviendaId,
       checklist_item_id: p.checklist_item_id,
       numero_revision: numeroRevision,
-      observacion: p.observacion,
+      observacion: p.observacion ?? null,
     })),
   )
   if (error) throw error

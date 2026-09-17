@@ -13,12 +13,8 @@ const queryKey = ['checklist', props.viviendaId, props.numeroRevision]
 const { data: respuestas, error, isLoading } = useQuery({
   queryKey,
   queryFn: async () => {
-    let filas = await api.listViviendaChecklist(props.viviendaId, props.numeroRevision)
-    if (filas.length === 0) {
-      await api.crearChecklistParaRevision(props.viviendaId, props.numeroRevision)
-      filas = await api.listViviendaChecklist(props.viviendaId, props.numeroRevision)
-    }
-    return filas
+    await api.sincronizarChecklistRevision(props.viviendaId, props.numeroRevision)
+    return await api.listViviendaChecklist(props.viviendaId, props.numeroRevision)
   },
   select: (data) => [...data].sort((a, b) => a.checklist_items.orden - b.checklist_items.orden),
 })
