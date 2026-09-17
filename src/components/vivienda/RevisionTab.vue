@@ -5,7 +5,7 @@ import ChecklistTab from './ChecklistTab.vue'
 import type { ViviendaRow, Resolucion, NumeroRevision, RevisionCampos } from '@/lib/database.types'
 
 const props = defineProps<{ vivienda: ViviendaRow; numero: NumeroRevision }>()
-const emit = defineEmits<{ actualizado: [numero: NumeroRevision, resolucion: Resolucion] }>()
+const emit = defineEmits<{ actualizado: [numero: NumeroRevision, resolucion: Resolucion | null] }>()
 
 const PREFIJO: Record<NumeroRevision, 'primera' | 'segunda' | 'tercera'> = {
   1: 'primera',
@@ -40,7 +40,10 @@ function resolucionActual(): Resolucion | null {
 const revisadoPor = props.vivienda[`${p}_revisado_por` as keyof ViviendaRow] as string | null
 const fechaResuelta = (props.vivienda[`${p}_fecha` as keyof ViviendaRow] as string | null)?.slice(0, 10)
 
-const bloqueada = !!resolucionActual()
+// Si la revisión ya estaba resuelta al abrir esta pestaña: solo se usa para mostrar
+// quién/cuándo la resolvió y para no saltar de pestaña al guardar una corrección
+// (el salto automático solo aplica la primera vez que se resuelve).
+const yaResuelta = !!resolucionActual()
 
 const campos = reactive<RevisionCampos>({
   resolucion: resolucionActual(),
@@ -58,7 +61,7 @@ async function guardar() {
   error.value = ''
   try {
     await api.guardarRevision(props.vivienda.id, props.numero, campos)
-    emit('actualizado', props.numero, campos.resolucion)
+    emit('actualizado', props.numero, yaResuelta ? null : campos.resolucion)
   } catch (err) {
     const mensaje = (err as { message?: string } | null)?.message
     error.value = mensaje || 'No se pudo guardar la revisión.'
@@ -76,11 +79,7 @@ async function guardar() {
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label class="text-xs text-gray-500">Resolución</label>
-            <select
-              v-model="campos.resolucion"
-              :disabled="bloqueada"
-              class="w-full border rounded-lg px-2 py-1.5"
-            >
+            <select v-model="campos.resolucion" class="w-full border rounded-lg px-2 py-1.5">
               <option :value="null" disabled>Seleccione…</option>
               <option value="Aprobado">Aprobado</option>
               <option value="Rechazado">Rechazado</option>
@@ -88,33 +87,18 @@ async function guardar() {
           </div>
           <div>
             <label class="text-xs text-gray-500">Fecha de la resolución</label>
-            <input
-              v-model="campos.fecha"
-              :disabled="bloqueada"
-              type="date"
-              class="w-full border rounded-lg px-2 py-1.5"
-            />
+            <input v-model="campos.fecha" type="date" class="w-full border rounded-lg px-2 py-1.5" />
           </div>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label class="text-xs text-gray-500">Fecha de inicio</label>
-            <input
-              v-model="campos.fecha_inicio"
-              :disabled="bloqueada"
-              type="date"
-              class="w-full border rounded-lg px-2 py-1.5"
-            />
+            <input v-model="campos.fecha_inicio" type="date" class="w-full border rounded-lg px-2 py-1.5" />
           </div>
           <div>
             <label class="text-xs text-gray-500">Fecha de vencimiento</label>
-            <input
-              v-model="campos.fecha_vencimiento"
-              :disabled="bloqueada"
-              type="date"
-              class="w-full border rounded-lg px-2 py-1.5"
-            />
+            <input v-model="campos.fecha_vencimiento" type="date" class="w-full border rounded-lg px-2 py-1.5" />
           </div>
         </div>
 
@@ -129,11 +113,10 @@ async function guardar() {
     </section>
 
     <div>
-      <p v-if="bloqueada" class="text-xs text-gray-500 mb-2">
+      <p v-if="yaResuelta" class="text-xs text-gray-500 mb-2">
         Revisado por {{ revisadoPor }} el {{ fechaResuelta }}
       </p>
       <button
-        v-else
         type="button"
         class="bg-primary text-white px-4 py-2 rounded-lg shadow-sm mb-2"
         :disabled="guardando || !campos.resolucion"

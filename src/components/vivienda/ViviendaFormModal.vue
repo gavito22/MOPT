@@ -68,9 +68,12 @@ function onActualizada() {
   emit('guardado')
 }
 
-async function onRevisionActualizada(numero: NumeroRevision, resolucion: Resolucion) {
+async function onRevisionActualizada(numero: NumeroRevision, resolucion: Resolucion | null) {
   await refetch()
   emit('guardado')
+  // resolucion viene null cuando es una corrección a una revisión ya resuelta:
+  // en ese caso no se cambia de pestaña, solo se refrescan los datos.
+  if (!resolucion) return
   if (resolucion === 'Aprobado') {
     activeTab.value = 'permiso'
   } else if (numero === 1) {
