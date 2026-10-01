@@ -208,7 +208,7 @@ insert into checklist_items (nombre, orden) values
   ('Plano catastrado', 3),
   ('Velocidad', 4),
   ('Alineamiento', 5),
-  ('Declaración', 6),
+  ('Carta de Compromiso', 6),
   ('Diseños', 7),
   ('Otros', 8)
 on conflict do nothing;

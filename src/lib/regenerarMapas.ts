@@ -1,20 +1,10 @@
 import L from 'leaflet'
-import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png'
-import markerIcon from 'leaflet/dist/images/marker-icon.png'
-import markerShadow from 'leaflet/dist/images/marker-shadow.png'
+import { asegurarIconoPorDefecto } from './leafletIcons'
 import { capturarMapa } from './useMapCapture'
 import { subirImagenMapa, actualizarVivienda } from './api'
 import type { ViviendaRow } from './database.types'
 
-// Mismo fix que UbicacionTab.vue: el bundler no resuelve las URLs de íconos por
-// defecto de Leaflet. Se repite aquí porque este módulo puede ejecutarse sin que
-// UbicacionTab.vue se haya montado nunca en la sesión.
-delete (L.Icon.Default.prototype as unknown as { _getIconUrl?: unknown })._getIconUrl
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: markerIcon2x,
-  iconUrl: markerIcon,
-  shadowUrl: markerShadow,
-})
+asegurarIconoPorDefecto()
 
 /** Tamaño mínimo (bytes) que debería pesar una captura con tiles cargados; menos que esto
  * indica casi con certeza un mapa en blanco (tiles que no llegaron a cargar a tiempo). */

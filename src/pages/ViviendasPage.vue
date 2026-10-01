@@ -10,16 +10,21 @@ import {
   Pencil,
   FileText,
   Trash2,
+  Map as MapIcon,
+  List,
 } from '@lucide/vue'
 import * as api from '@/lib/api'
 import { exportCompendio, parseDatosCrudosExcel } from '@/lib/excelExport'
 import { exportFichaPdf } from '@/lib/fichaPdf'
 import ConfirmModal from '@/components/ConfirmModal.vue'
 import ViviendaFormModal from '@/components/vivienda/ViviendaFormModal.vue'
+import ViviendasMapa from '@/components/ViviendasMapa.vue'
 import { cn, formatFecha, estadoBadgeClasses } from '@/lib/utils'
 import type { Estado } from '@/lib/database.types'
 
 const queryClient = useQueryClient()
+
+const vistaMapa = ref(false)
 
 const filtrosExpandidos = ref(false)
 const filtroDesde = ref('')
@@ -158,6 +163,13 @@ function onGuardadoModal() {
       </div>
       <div class="flex gap-2 flex-wrap">
         <button
+          class="flex items-center gap-2 border px-4 py-2 rounded-lg shadow-sm"
+          @click="vistaMapa = !vistaMapa"
+        >
+          <template v-if="vistaMapa"><List class="size-4" /> Listado</template>
+          <template v-else><MapIcon class="size-4" /> Mapa</template>
+        </button>
+        <button
           class="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg shadow-sm"
           @click="abrirNuevaVivienda"
         >
@@ -246,7 +258,9 @@ function onGuardadoModal() {
       </div>
     </div>
 
-    <div class="bg-surface rounded-lg shadow overflow-x-auto">
+    <ViviendasMapa v-if="vistaMapa" :viviendas="viviendas ?? []" />
+
+    <div v-else class="bg-surface rounded-lg shadow overflow-x-auto">
       <table class="w-full text-sm">
         <thead>
           <tr class="text-left border-b text-gray-500">
