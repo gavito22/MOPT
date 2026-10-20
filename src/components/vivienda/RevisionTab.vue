@@ -2,10 +2,14 @@
 import { reactive, ref } from 'vue'
 import * as api from '@/lib/api'
 import ChecklistTab from './ChecklistTab.vue'
+import ConfirmModal from '../ConfirmModal.vue'
 import type { ViviendaRow, Resolucion, NumeroRevision, RevisionCampos } from '@/lib/database.types'
 
 const props = defineProps<{ vivienda: ViviendaRow; numero: NumeroRevision }>()
-const emit = defineEmits<{ actualizado: [numero: NumeroRevision, resolucion: Resolucion | null] }>()
+const emit = defineEmits<{
+  actualizado: [numero: NumeroRevision, resolucion: Resolucion | null]
+  rechazadoDefinitivo: []
+}>()
 
 const PREFIJO: Record<NumeroRevision, 'primera' | 'segunda' | 'tercera'> = {
   1: 'primera',
@@ -69,6 +73,14 @@ async function guardar() {
     guardando.value = false
   }
 }
+
+const confirmarRechazo = ref(false)
+
+async function onRechazar() {
+  confirmarRechazo.value = false
+  await api.rechazarDefinitivamente(props.vivienda.id)
+  emit('rechazadoDefinitivo')
+}
 </script>
 
 <template>
@@ -116,15 +128,33 @@ async function guardar() {
       <p v-if="yaResuelta" class="text-xs text-gray-500 mb-2">
         Revisado por {{ revisadoPor }} el {{ fechaResuelta }}
       </p>
-      <button
-        type="button"
-        class="bg-primary text-white px-4 py-2 rounded-lg shadow-sm mb-2"
-        :disabled="guardando || !campos.resolucion"
-        @click="guardar"
-      >
-        {{ guardando ? 'Guardando…' : `Guardar ${ETIQUETA[numero].toLowerCase()}` }}
-      </button>
+      <div class="flex gap-2 mb-2">
+        <button
+          type="button"
+          class="bg-primary text-white px-4 py-2 rounded-lg shadow-sm"
+          :disabled="guardando || !campos.resolucion"
+          @click="guardar"
+        >
+          {{ guardando ? 'Guardando…' : `Guardar ${ETIQUETA[numero].toLowerCase()}` }}
+        </button>
+        <button
+          type="button"
+          class="bg-error text-white px-4 py-2 rounded-lg shadow-sm"
+          @click="confirmarRechazo = true"
+        >
+          Rechazado
+        </button>
+      </div>
       <p v-if="error" class="text-xs text-error mb-2">{{ error }}</p>
     </div>
+
+    <ConfirmModal
+      :open="confirmarRechazo"
+      titulo="Rechazar proyecto"
+      mensaje="Se marcará este proyecto como Rechazado por completo y se cerrará el formulario."
+      texto-confirmar="Rechazado"
+      @cancelar="confirmarRechazo = false"
+      @confirmar="onRechazar"
+    />
   </div>
 </template>

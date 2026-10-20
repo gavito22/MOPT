@@ -104,12 +104,17 @@ create table if not exists viviendas (
   fecha_permiso_ejecucion_funcionamiento date,
   observaciones text,
 
+  -- Rechazo definitivo (botón "Rechazado" en cualquier revisión): corta el flujo
+  -- normal y marca el proyecto como completamente rechazado.
+  rechazo_definitivo boolean not null default false,
+
   created_at timestamptz not null default now(),
   created_by text,
   updated_at timestamptz not null default now(),
 
   estado text generated always as (
     case
+      when rechazo_definitivo then 'Rechazado'
       when primera_resolucion is null then 'Pendiente'
       when primera_resolucion = 'Aprobado' then 'Aprobado (1era revisión)'
       when primera_resolucion = 'Rechazado' and segunda_resolucion is null then 'Rechazado (1era revisión)'

@@ -208,6 +208,11 @@ export async function guardarRevision(id: string, numero: NumeroRevision, campos
   return actualizarVivienda(id, cambios as Partial<ViviendaRow>)
 }
 
+/** Corta el flujo de revisiones y marca la vivienda como Rechazada por completo. */
+export async function rechazarDefinitivamente(id: string) {
+  return actualizarVivienda(id, { rechazo_definitivo: true })
+}
+
 /** Permiso de ejecución y funcionamiento + Observaciones: comunes a la vivienda, no por revisión. */
 export async function guardarDatosAdicionales(id: string, campos: DatosAdicionalesCampos) {
   return actualizarVivienda(id, {

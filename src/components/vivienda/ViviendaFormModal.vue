@@ -86,6 +86,11 @@ async function onRevisionActualizada(numero: NumeroRevision, resolucion: Resoluc
 function cerrar() {
   emit('close')
 }
+
+function onRechazadoDefinitivo() {
+  emit('guardado')
+  cerrar()
+}
 </script>
 
 <template>
@@ -133,18 +138,21 @@ function cerrar() {
               :vivienda="vivienda"
               :numero="1"
               @actualizado="onRevisionActualizada"
+              @rechazado-definitivo="onRechazadoDefinitivo"
             />
             <RevisionTab
               v-else-if="activeTab === 'revision2'"
               :vivienda="vivienda"
               :numero="2"
               @actualizado="onRevisionActualizada"
+              @rechazado-definitivo="onRechazadoDefinitivo"
             />
             <RevisionTab
               v-else-if="activeTab === 'revision3'"
               :vivienda="vivienda"
               :numero="3"
               @actualizado="onRevisionActualizada"
+              @rechazado-definitivo="onRechazadoDefinitivo"
             />
             <PermisoTab v-else-if="activeTab === 'permiso'" :vivienda="vivienda" @actualizado="refetch()" />
           </template>

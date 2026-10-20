@@ -15,6 +15,9 @@ export function formatFecha(value: string | null | undefined) {
 
 /** Clases de color (fondo + texto) para la insignia de Estado en el listado. */
 export function estadoBadgeClasses(estado: Estado): string {
+  if (estado === 'Rechazado') {
+    return 'bg-gray-700 text-white dark:bg-gray-600 dark:text-gray-100'
+  }
   if (estado.startsWith('Rechazado')) {
     return 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300'
   }

@@ -1,9 +1,13 @@
 <script setup lang="ts">
-defineProps<{
-  open: boolean
-  titulo: string
-  mensaje: string
-}>()
+withDefaults(
+  defineProps<{
+    open: boolean
+    titulo: string
+    mensaje: string
+    textoConfirmar?: string
+  }>(),
+  { textoConfirmar: 'Eliminar' },
+)
 
 const emit = defineEmits<{ confirmar: []; cancelar: [] }>()
 </script>
@@ -24,7 +28,7 @@ const emit = defineEmits<{ confirmar: []; cancelar: [] }>()
             class="px-4 py-2 rounded-lg shadow-sm bg-error text-white"
             @click="emit('confirmar')"
           >
-            Eliminar
+            {{ textoConfirmar }}
           </button>
         </div>
       </div>

@@ -67,10 +67,12 @@ const kpis = computed(() => {
   const items = viviendas.value ?? []
   const pendientes = items.filter((v) => ESTADOS_PENDIENTES.includes(v.estado)).length
   const aprobados = items.filter((v) => v.estado.startsWith('Aprobado')).length
+  const rechazados = items.filter((v) => v.estado === 'Rechazado').length
   return {
     total: items.length,
     pendientes,
     aprobados,
+    rechazados,
   }
 })
 
@@ -82,6 +84,7 @@ const estados: Estado[] = [
   'Rechazado (2da revisión)',
   'Aprobado (3era revisión)',
   'Rechazado (3era revisión)',
+  'Rechazado',
 ]
 
 // ---------- Carga masiva ----------
@@ -201,7 +204,7 @@ function onGuardadoModal() {
 
     <p v-if="resultadoCarga" class="text-sm text-primary">{{ resultadoCarga }}</p>
 
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       <div class="bg-surface rounded-lg shadow p-4">
         <p class="text-3xl font-bold">{{ kpis.total }}</p>
         <p class="text-sm text-gray-500">Total proyectos</p>
@@ -213,6 +216,10 @@ function onGuardadoModal() {
       <div class="bg-surface rounded-lg shadow p-4">
         <p class="text-3xl font-bold text-success">{{ kpis.aprobados }}</p>
         <p class="text-sm text-gray-500">Aprobados</p>
+      </div>
+      <div class="bg-surface rounded-lg shadow p-4">
+        <p class="text-3xl font-bold text-gray-700 dark:text-gray-300">{{ kpis.rechazados }}</p>
+        <p class="text-sm text-gray-500">Rechazados</p>
       </div>
     </div>
 

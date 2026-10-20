@@ -9,6 +9,7 @@ export type Estado =
   | 'Rechazado (2da revisión)'
   | 'Aprobado (3era revisión)'
   | 'Rechazado (3era revisión)'
+  | 'Rechazado'
 
 /** Campos que tiene cada una de las 3 revisiones (mismo formato para las 3). */
 export interface RevisionCampos {
@@ -100,6 +101,7 @@ export interface ViviendaRow {
   permiso_ejecucion_funcionamiento: string | null
   fecha_permiso_ejecucion_funcionamiento: string | null
   observaciones: string | null
+  rechazo_definitivo: boolean
   created_at: string
   created_by: string | null
   updated_at: string
