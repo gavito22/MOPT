@@ -213,6 +213,11 @@ export async function rechazarDefinitivamente(id: string) {
   return actualizarVivienda(id, { rechazo_definitivo: true })
 }
 
+/** Deshace el rechazo definitivo y reactiva el flujo normal de revisiones. */
+export async function revertirRechazo(id: string) {
+  return actualizarVivienda(id, { rechazo_definitivo: false })
+}
+
 /** Permiso de ejecución y funcionamiento + Observaciones: comunes a la vivienda, no por revisión. */
 export async function guardarDatosAdicionales(id: string, campos: DatosAdicionalesCampos) {
   return actualizarVivienda(id, {
